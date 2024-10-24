@@ -18,7 +18,7 @@ class KeyboardController(Node):
         try:
             tty.setcbreak(sys.stdin.fileno())
             while True:
-                key = sys.stdin.read(1)
+                key = sys.stdin.read(3)  # Read 3 characters for escape sequences
                 if key == '\x03':  # Ctrl+C
                     break
                 self.process_key(key)
