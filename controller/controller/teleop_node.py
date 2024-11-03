@@ -1,6 +1,7 @@
 # test.py
 
 import rclpy
+from rclpy.qos import qos_profile_system_default
 from rclpy.node import Node
 from geometry_msgs.msg import Twist
 from pynput import keyboard
@@ -8,12 +9,15 @@ from pynput import keyboard
 class TeleopNode(Node):
     def __init__(self):
         super().__init__('teleop_node')
-        self.publisher_ = self.create_publisher(Twist, 'cmd_vel', 10)
+        self.get_logger().info("Teleop node has been started.")
+        self.publisher_ = self.create_publisher(Twist, 'cmd_vel', qos_profile=qos_profile_system_default)
         self.twist = Twist()
-        self.listener = keyboard.Listener(on_press=self.on_press, on_release=self.on_release)
+        self.create_timer(0.5, lambda: self.on_press(keyboard.Key.up))
+        self.listener = keyboard.Listener(on_press=self.on_press, on_release=self.on_release, suppress=False)
         self.listener.start()
 
     def on_press(self, key):
+        self.get_logger().info("pressed")
         try:
             if key == keyboard.Key.up:
                 self.twist.linear.x = 1.0
@@ -37,10 +41,7 @@ class TeleopNode(Node):
 def main(args=None):
     rclpy.init(args=args)
     node = TeleopNode()
-    try:
-        rclpy.spin(node)
-    except KeyboardInterrupt:
-        pass
+    rclpy.spin(node)
     node.destroy_node()
     rclpy.shutdown()
 
