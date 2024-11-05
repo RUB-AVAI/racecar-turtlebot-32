@@ -1,6 +1,15 @@
 import rclpy
 from rclpy.node import Node
-from ackermann_msgs.msg import AckermannDriveStamped
+import sys
+import termios
+from geometry_msgs.msg import Twist
+import tty
+
+
+import rclpy
+from rclpy.qos import qos_profile_system_default
+from rclpy.node import Node
+from geometry_msgs.msg import Twist
 import sys
 import termios
 import tty
@@ -9,8 +18,9 @@ class KeyboardController(Node):
 
     def __init__(self):
         super().__init__('keyboard_controller')
-        self.publisher_ = self.create_publisher(AckermannDriveStamped, '/vesc/ackermann_cmd_mux/input/teleop', 10)
+        self.publisher_ = self.create_publisher(Twist, 'cmd_vel', qos_profile=qos_profile_system_default)
         self.get_logger().info('Keyboard controller node has been started.')
+        self.twist = Twist()
         self.run()
 
     def run(self):
@@ -18,7 +28,8 @@ class KeyboardController(Node):
         try:
             tty.setcbreak(sys.stdin.fileno())
             while True:
-                key = sys.stdin.read(3)  # Read 3 characters for escape sequences
+                key = sys.stdin.read(1)  # Read 3 characters for escape sequences
+                self.get_logger().info(key)
                 if key == '\x03':  # Ctrl+C
                     break
                 self.process_key(key)
@@ -26,23 +37,20 @@ class KeyboardController(Node):
             termios.tcsetattr(sys.stdin, termios.TCSADRAIN, settings)
 
     def process_key(self, key):
-        msg = AckermannDriveStamped()
-        if key == '\x1b[A':  # Up arrow
-            msg.drive.speed = 1.0
-            msg.drive.steering_angle = 0.0
-        elif key == '\x1b[B':  # Down arrow
-            msg.drive.speed = -1.0
-            msg.drive.steering_angle = 0.0
-        elif key == '\x1b[C':  # Right arrow
-            msg.drive.speed = 0.5
-            msg.drive.steering_angle = -0.5
-        elif key == '\x1b[D':  # Left arrow
-            msg.drive.speed = 0.5
-            msg.drive.steering_angle = 0.5
+        
+        if key == 'w':  # Up arrow
+            self.twist.linear.x = 1.0
+        elif key == 's':  # Down arrow
+            self.twist.linear.x = -1.0
+        elif key == 'd':  # Right arrow
+            self.twist.linear.z = 1.0
+        elif key == 'a':  # Left arrow
+            self.twist.linear.z = -1.0
         else:
             return
-        self.publisher_.publish(msg)
-        self.get_logger().info('Publishing: speed=%f, steering_angle=%f' % (msg.drive.speed, msg.drive.steering_angle))
+        self.publisher_.publish(self.twist)
+        self.get_logger().info('Publishing: linear.x=%f, linear.z=%f' % (self.twist.linear.x, self.twist.linear.z))
+       
 
 def main(args=None):
     rclpy.init(args=args)
