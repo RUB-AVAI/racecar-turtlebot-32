@@ -17,7 +17,7 @@ class TeleopNode(Node):
         self.listener.start()
 
     def on_press(self, key):
-        self.get_logger().info("pressed")
+        self.get_logger().info("pressed")   
         try:
             if key == keyboard.Key.up:
                 self.twist.linear.x = 1.0
