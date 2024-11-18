@@ -20,6 +20,7 @@ setup(
     tests_require=['pytest'],
     entry_points={
         'console_scripts': [
+            "occupancy_node = occupancy_map_pkg.occupancy_node:main"
         ],
     },
 )
