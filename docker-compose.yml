@@ -1,0 +1,11 @@
+services:
+  ros:
+    build: .
+    container_name: ros_humble_container
+    volumes:
+      - ./src:/workspace/src  # Das src-Verzeichnis auf deinem Host wird in den Container gemountet
+    environment:
+      - DISPLAY=${DISPLAY}  # Falls du grafische Anwendungen verwenden möchtest
+    network_mode: "host"  # Optional, wenn du ROS2 Nodes über das Netzwerk verbinden möchtest
+    stdin_open: true
+    tty: true
