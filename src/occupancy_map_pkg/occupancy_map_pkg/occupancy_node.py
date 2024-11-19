@@ -1,4 +1,5 @@
 import rclpy
+from tf_transformations import euler_from_quaternion
 from rclpy.node import Node
 from nav_msgs.msg import Odometry
 
@@ -25,6 +26,10 @@ class OccupancyNode(Node):
         self.get_logger().info(f"Orientation: x={orientation.x}, y={orientation.y}, z={orientation.z}, w={orientation.w}")
         self.get_logger().info(f"Linear Velocity: x={linear_velocity.x}, y={linear_velocity.y}, z={linear_velocity.z}")
         self.get_logger().info(f"Angular Velocity: x={angular_velocity.x}, y={angular_velocity.y}, z={angular_velocity.z}")
+        r,p,y = \
+            euler_from_quaternion\
+                ([orientation.w, orientation.x, orientation.y, orientation.z])
+        self.get_logger().info(f"Transformed Orientation: r={r}, p={p}, y={y}")
     
     def timer_callback(self):
         self.get_logger().info('occupancynode running')
