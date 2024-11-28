@@ -137,3 +137,4 @@ dmypy.json
 
 # ros bag
 *.db3
+rosbag/
