@@ -3,6 +3,7 @@ from rclpy.qos import qos_profile_system_default
 from rclpy.node import Node
 from sensor_msgs.msg import Image
 from cv_bridge import CvBridge
+import cv2
 import numpy as np
 
 class CameraNode(Node):
@@ -10,9 +11,10 @@ class CameraNode(Node):
         super().__init__('camera_node')
         self.get_logger().info("Camera node has been started.")
 
+        self.image_counter = 0
         # Abonnieren der Topics
         self.color_sub = self.create_subscription(Image, '/color/image_raw', self.color_callback, qos_profile_system_default)
-        self.depth_sub = self.create_subscription(Image, '/depth/image_rect_raw', self.depth_callback, qos_profile_system_default)
+        # self.depth_sub = self.create_subscription(Image, '/depth/image_rect_raw', self.depth_callback, qos_profile_system_default)
 
         # Initialisieren des CvBridge-Objekts
         self.bridge = CvBridge()
@@ -20,6 +22,8 @@ class CameraNode(Node):
     def color_callback(self, msg):
         # Verarbeiten der Farbbild-Daten
         cv_image = self.bridge.imgmsg_to_cv2(msg, desired_encoding='bgr8')
+        status = cv2.imwrite(f'src/camera_pkg/camera_pkg/images/{self.image_counter:03d}.png',cv_image)
+        self.image_counter += 1
         # Hier kannst du die Farbbild-Daten verarbeiten
 
     def depth_callback(self, msg):
