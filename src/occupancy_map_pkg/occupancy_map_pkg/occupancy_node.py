@@ -68,19 +68,21 @@ class MainWindow(QMainWindow):
         self.label.setPixmap(self.node.map)
 
 def main(args=None):
+    
+    app = QApplication(sys.argv)
     rclpy.init(args=args)
     node = OccupancyNode()
-
-    app = QApplication(sys.argv)
     window = MainWindow(node)
     window.show()
+    
 
-    try:
-        rclpy.spin(node)
-    except KeyboardInterrupt:
-        pass
-    node.destroy_node()
-    rclpy.shutdown()
+
+    #try:
+    #    rclpy.spin(node)
+    #except KeyboardInterrupt:
+    #    pass
+    #node.destroy_node()
+    #rclpy.shutdown()
     sys.exit(app.exec_())
 
 if __name__ == '__main__':
