@@ -36,17 +36,17 @@ class TeleopNode(Node):
         msg = AckermannDriveStamped()
         try:
             if key == keyboard.Key.up:
-            	msg.drive.speed = 1.0
-            	msg.drive.steering_angle = 0.0
+                msg.drive.speed = 1.0
+                msg.drive.steering_angle = 0.0
             elif key == keyboard.Key.down:
-            	msg.drive.speed = 1.0
-            	msg.drive.steering_angle = 0.0
+                msg.drive.speed = 1.0
+                msg.drive.steering_angle = 0.0
             elif key == keyboard.Key.left:
                 msg.drive.speed = 1.0
                 msg.drive.steering_angle = -0.5
             elif key == keyboard.Key.right:
-            	msg.drive.speed = 1.0
-            	msg.drive.steering_angle = 0.5
+                msg.drive.speed = 1.0
+                msg.drive.steering_angle = 0.5
             self.publisher_.publish(msg)
         except AttributeError:
             pass
@@ -64,14 +64,14 @@ class TeleopNode(Node):
             return
 
     def on_release(self, key):
-    	msg = AckermannDriveStamped()
-    	if key in [keyboard.Key.up, keyboard.Key.down]:
+        msg = AckermannDriveStamped()
+        if key in [keyboard.Key.up, keyboard.Key.down]:
             msg.drive.speed = 0.0
             msg.drive.steering_angle = 0.0
-    	elif key in [keyboard.Key.left, keyboard.Key.right]:
+        elif key in [keyboard.Key.left, keyboard.Key.right]:
             msg.drive.speed = 0.0
             msg.drive.steering_angle = 0.0
-    	self.publisher_.publish(msg)
+        self.publisher_.publish(msg)
 
 def main(args=None):
     rclpy.init(args=args)
