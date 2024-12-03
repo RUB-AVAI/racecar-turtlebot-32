@@ -36,17 +36,17 @@ class TeleopNode(Node):
         msg = AckermannDriveStamped()
         try:
             if key == keyboard.Key.up:
-            	msg.drive.speed = 1.0
-            	msg.drive.steering_angle = 0.0
+                msg.drive.speed = 1.0
+                msg.drive.steering_angle = 0.0
             elif key == keyboard.Key.down:
-            	msg.drive.speed = 1.0
-            	msg.drive.steering_angle = 0.0
+                msg.drive.speed = 1.0
+                msg.drive.steering_angle = 0.0
             elif key == keyboard.Key.left:
                 msg.drive.speed = 1.0
                 msg.drive.steering_angle = -0.5
             elif key == keyboard.Key.right:
-            	msg.drive.speed = 1.0
-            	msg.drive.steering_angle = 0.5
+                msg.drive.speed = 1.0
+                msg.drive.steering_angle = 0.5
             self.publisher_.publish(msg)
         except AttributeError:
             pass
