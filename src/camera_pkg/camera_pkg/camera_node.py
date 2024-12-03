@@ -11,33 +11,46 @@ class CameraNode(Node):
         super().__init__('camera_node')
         self.get_logger().info("Camera node has been started.")
 
-        self.image_counter = 0
-        # Abonnieren der Topics
-        self.color_sub = self.create_subscription(Image, '/color/image_raw', self.color_callback, qos_profile_system_default)
-        # self.depth_sub = self.create_subscription(Image, '/depth/image_rect_raw', self.depth_callback, qos_profile_system_default)
-
-        # Initialisieren des CvBridge-Objekts
+        # Initialize the CvBridge object
         self.bridge = CvBridge()
 
-    def color_callback(self, msg):
-        # Verarbeiten der Farbbild-Daten
-        cv_image = self.bridge.imgmsg_to_cv2(msg, desired_encoding='bgr8')
-        status = cv2.imwrite(f'src/camera_pkg/camera_pkg/images/{self.image_counter:03d}.png',cv_image)
-        self.image_counter += 1
-        # Hier kannst du die Farbbild-Daten verarbeiten
+        # Abonniere Kamera-Topics, um an Bilder und Tiefenwerte der Kamera zu kommen
+        self.color_sub = self.create_subscription(
+            Image, '/color/image_raw', self.color_callback, qos_profile_system_default)
+        self.depth_sub = self.create_subscription(
+            Image, '/depth/image_rect_raw', self.depth_callback, qos_profile_system_default)
+
+        # Publishe Bilder und Tiefenwerte für Distanzerkennung
+        self.color_pub = self.create_publisher(
+            Image, '/camera/color/image_raw', qos_profile_system_default)
+        self.depth_pub = self.create_publisher(
+            Image, '/camera/aligned_depth_to_color/image_raw', qos_profile_system_default)
+
+    def color_callback(self, msg):  
+        try:
+            color_image = self.bridge.imgmsg_to_cv2(msg, "bgr8")
+
+            # Konvertiere zurück zu ROS Image 
+            processed_color_msg = self.bridge.cv2_to_imgmsg(color_image, encoding="bgr8")
+            processed_color_msg.header = msg.header
+
+            # Publishe verarbeitet Bilder
+            self.color_pub.publish(processed_color_msg)
+        except Exception as e:
+            self.get_logger().error('Failed to process color image: %s' % str(e))
 
     def depth_callback(self, msg):
-        # Verarbeiten der Tiefenbild-Daten
-        cv_image = self.bridge.imgmsg_to_cv2(msg, desired_encoding='16UC1')
-        points = np.zeros((cv_image.shape[0] * cv_image.shape[1], 3), dtype=np.float32)
-        for y in range(cv_image.shape[0]):
-            for x in range(cv_image.shape[1]):
-                depth = cv_image[y, x]
-                if depth!= 0:
-                    points[y * cv_image.shape[1] + x] = [x, y, depth]
-        np.savetxt('camera_pkg/camera_pkg/depth.pcd', points, fmt='%f')
+        try:
+            depth_image = self.bridge.imgmsg_to_cv2(msg, desired_encoding='16UC1')
 
-        
+            # Konvertiere zurück zu ROS Image 
+            processed_depth_msg = self.bridge.cv2_to_imgmsg(depth_image, encoding="16UC1")
+            processed_depth_msg.header = msg.header
+
+            # Publishe verarbeitete Tiefenwerte
+            self.depth_pub.publish(processed_depth_msg)
+        except Exception as e:
+            self.get_logger().error('Failed to process depth image: %s' % str(e))
 
 def main(args=None):
     rclpy.init(args=args)

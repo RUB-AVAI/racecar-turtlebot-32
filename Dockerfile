@@ -6,7 +6,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     ros-humble-desktop=0.10.0-1* \
     python3-colcon-common-extensions \
     && rm -rf /var/lib/apt/lists/* \
-    apt install python3-pip
+    apt install python3-pip \
+    pip3 install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cpu
 
 # Set up workspace and set environment variables
 ENV ROS_WS=/workspace
