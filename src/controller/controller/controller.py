@@ -7,15 +7,18 @@ from bounding_boxes_msgs.msg import OccupanyMap
 import sys
 import termios
 import tty
+from math import atan2, copysign, radians, cos, sin, sqrt
 from pynput import keyboard
 import math
 
 class TeleopNode(Node):
     def __init__(self):
         super().__init__('teleop_node')
+        self.target = None
+        self.last_target = None
         self.get_logger().info("Teleop node has been started.")
         self.publisher_ = self.create_publisher(AckermannDriveStamped, 'drive', 10)
-        self.subscriber_occupany_map = self.create_subscription(OccupanyMap, 'cones', self.occupancy_callback, qos_profile=qos_profile_system_default)
+        self.subscriber_occupany_map = self.create_subscription(OccupanyMap, 'occupancy_map', self.occupancy_callback)
         self.listener = keyboard.Listener(on_press=self.on_press, on_release=self.on_release, suppress=False)
         self.listener.start()
     
@@ -39,30 +42,77 @@ class TeleopNode(Node):
         if len(points) < 2:
             self.get_logger().info("Not enough points to determine path")
             return
-
-        # Find the two nearest points with different labels
-        nearest_points = self.find_nearest_points(points, rob_pos)
-
-        if nearest_points:
-            point1, point2 = nearest_points
-            midpoint = self.calculate_midpoint(point1, point2)
-            self.drive_to_midpoint(midpoint, rob_pos)
+        
+        if self.target is not None:
+            distance_to_last_target = self.calculate_distance(rob_pos, self.target)
+            if distance_to_last_target < 0.1:
+                self.last_target = self.target
+                self.target = None
         else:
-            self.get_logger().info("Could not find two points with different labels")
+            # Find the two nearest points with different labels
+            for step in range(5):
+                self.find_nearest_points(points, rob_pos, step)
+                if self.target is not None:
+                    break
 
-    def find_nearest_points(self, points, rob_pos):
-        min_distance = float('inf')
-        nearest_points = None
+            if self.target:
+                point1, point2 = self.target
+                midpoint = self.calculate_midpoint(point1, point2)
+                self.drive_to_midpoint(midpoint, rob_pos)
+            else:
+                self.get_logger().info("Could not find two points with different labels")
 
-        for i in range(len(points)):
-            for j in range(i + 1, len(points)):
-                if points[i].label != points[j].label:
-                    distance = self.calculate_distance(points[i], points[j])
-                    if distance < min_distance:
-                        min_distance = distance
-                        nearest_points = (points[i], points[j])
+    def find_nearest_points(self, points, rob_pos, line_step):
+        distance_threshold = 1
+        sign = lambda x: copysign(1, x)
+        # get front points
+        yellow = []
+        blue = []
+        # use a 90 degree vector to decide if a point is in front of the bot or not
+        # vector goes from bot position to a point (x2,y2) in the direction of the vector
+        vect_angle = radians(rob_pos["angle"] + 90)
 
-        return nearest_points
+        line_distance = 0.05
+        x1 = cos(rob_pos["angle"]) * line_distance*line_step + rob_pos["x"]
+        y1 = sin(rob_pos["angle"]) * line_distance*line_step + rob_pos["y"]
+        x2 = cos(vect_angle) * 2 + rob_pos["x"]
+        y2 = sin(vect_angle) * 2 + rob_pos["y"]
+        for point in points:
+            # check if point is "left" or "right" of vector
+            front = sign((x2 - x1) * (point[1] - y1) - (y2 - y1) * (point[0] - x1))
+            if front < 0:
+                distance = sqrt((point[0] - rob_pos["x"]) ** 2 + (point[1] - rob_pos["y"]) ** 2)
+                if distance <= distance_threshold:
+                    self.get_logger().info(f"conedistance: {distance}")
+                    if point[2] == 0:
+                        blue.append([point, distance])
+                    if point[2] == 2:
+                        yellow.append([point, distance])
+        if len(yellow) == 0:
+            self.get_logger().info("no yellow cones")
+            #NEED TO SEARCH HERE
+            #self.twist.publish(Twist())
+            #self.search(1)  # turn slowly
+
+        elif len(blue) == 0:
+            self.get_logger().info("no blue cones")
+            #NEED TO SEARCH HERE
+            #self.twist.publish(Twist())
+            #self.search(0)  # turn slowly in the other direction
+            # return
+        else:
+            yellow.sort(key=lambda x: x[1])
+            blue.sort(key=lambda x: x[1])
+
+            min_yellow = yellow[0][0]
+            min_blue = blue[0][0]
+
+            middle_point = ((min_yellow[0] - min_blue[0]) * 0.5 + min_blue[0],
+                            (min_yellow[1] - min_blue[1]) * 0.5 + min_blue[1])
+
+            self.get_logger().info(str(middle_point))
+            if self.target == None:
+                self.target = middle_point
 
     def calculate_distance(self, point1, point2):
         return math.sqrt((point1.x - point2.x) ** 2 + (point1.y - point2.y) ** 2)
