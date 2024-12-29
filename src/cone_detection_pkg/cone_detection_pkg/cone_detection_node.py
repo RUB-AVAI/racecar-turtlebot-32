@@ -66,7 +66,6 @@ class ConeDetectionNode(Node):
                 box_height = y2 - y1
 
                 # filter out bounding boxes
-                print(box_width, box_width)
                 if box_width < self.min_box_size or box_height < self.min_box_size or box_width > self.max_box_size or box_height > self.max_box_size:
                     continue 
 
