@@ -8,13 +8,13 @@ import numpy as np
 from ultralytics import YOLO
 from message_filters import ApproximateTimeSynchronizer, Subscriber
 from avai_messages.msg import Detection, DetectionArray
+from pathlib import Path
 
 class ConeDetectionNode(Node):
     def __init__(self):
         super().__init__('cone_detection_node')
         self.get_logger().info("Cone Detection Node has been started.")
-
-        self.model = YOLO('/workspace/src/cone_detection_pkg/cone_detection_pkg/ml_model/best.pt')
+        self.model = YOLO(Path(__file__).parent / "ml_model"/"best.pt")
         self.bridge = CvBridge()
 
         # Subscribers
@@ -141,7 +141,7 @@ class ConeDetectionNode(Node):
         # Save the annotated image
         timestamp = color_msg.header.stamp.sec  # Use ROS message timestamp
         output_path = f"/workspace/src/cone_detection_pkg/cone_detection_pkg/image/detections_{timestamp}.png"  # Change the path as needed
-        cv2.imwrite(output_path, save_image)
+        #cv2.imwrite(output_path, save_image)
 
         self.get_logger().info(f"Image saved: {output_path}")
 
