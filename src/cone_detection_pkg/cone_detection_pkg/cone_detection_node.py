@@ -20,6 +20,11 @@ class ConeDetectionNode(Node):
         # Subscribers
         self.color_sub = Subscriber(self, Image, '/camera/color/image_raw')
         self.depth_sub = Subscriber(self, Image, '/camera/aligned_depth_to_color/image_raw')
+        
+        # thresholds for box
+        # TODO: specify values
+        self.min_box_size = 50
+        self.max_box_size = 200
 
         # Publisher
         self.publisher_detections = self.create_publisher(DetectionArray, "detections", 10)
@@ -46,6 +51,7 @@ class ConeDetectionNode(Node):
         # Initialize DetectionArray message
         detection_array = DetectionArray()
 
+        
         # Draw bounding boxes and labels on the image
         for result in results:
             boxes = result.boxes.xyxy.cpu().numpy()
@@ -54,6 +60,15 @@ class ConeDetectionNode(Node):
 
             for box, conf, label in zip(boxes, confidences, labels):
                 x1, y1, x2, y2 = box
+
+                # skip bounding box if too small or large
+                box_width = x2 - x1
+                box_height = y2 - y1
+
+                # filter out bounding boxes
+                print(box_width, box_width)
+                if box_width < self.min_box_size or box_height < self.min_box_size or box_width > self.max_box_size or box_height > self.max_box_size:
+                    continue 
 
                 # Draw bounding box
                 cv2.rectangle(color_image_rgb, (int(x1), int(y1)), (int(x2), int(y2)), (255, 0, 0), 2)
