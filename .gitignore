@@ -138,3 +138,6 @@ dmypy.json
 # ros bag
 *.db3
 rosbag/
+
+# .DS_Store
+.DS_Store

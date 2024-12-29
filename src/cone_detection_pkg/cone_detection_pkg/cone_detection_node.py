@@ -3,10 +3,11 @@ from rclpy.node import Node
 from sensor_msgs.msg import Image
 from cv_bridge import CvBridge
 import cv2
+import matplotlib.pyplot as plt
 import numpy as np
 from ultralytics import YOLO
 from message_filters import ApproximateTimeSynchronizer, Subscriber
-from cone_detection_pkg.msg import Detection, DetectionArray
+from avai_messages.msg import Detection, DetectionArray
 
 class ConeDetectionNode(Node):
     def __init__(self):
@@ -117,11 +118,17 @@ class ConeDetectionNode(Node):
         # Publish DetectionArray message
         self.publisher_detections.publish(detection_array)
 
-        # Optionally, display the image using matplotlib
-        plt.figure(figsize=(10, 10))
-        plt.imshow(color_image_rgb)
-        plt.axis("off")
-        plt.show()
+        # Optionally, save the image using cvbridge
+
+        # Convert RGB image back to BGR for saving
+        save_image = cv2.cvtColor(color_image_rgb, cv2.COLOR_RGB2BGR)
+
+        # Save the annotated image
+        timestamp = color_msg.header.stamp.sec  # Use ROS message timestamp
+        output_path = f"/workspace/src/cone_detection_pkg/cone_detection_pkg/image/detections_{timestamp}.png"  # Change the path as needed
+        cv2.imwrite(output_path, save_image)
+
+        self.get_logger().info(f"Image saved: {output_path}")
 
 
 def main(args=None):
