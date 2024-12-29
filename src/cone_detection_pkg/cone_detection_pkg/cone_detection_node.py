@@ -8,18 +8,23 @@ import numpy as np
 from ultralytics import YOLO
 from message_filters import ApproximateTimeSynchronizer, Subscriber
 from avai_messages.msg import Detection, DetectionArray
+from pathlib import Path
 
 class ConeDetectionNode(Node):
     def __init__(self):
         super().__init__('cone_detection_node')
         self.get_logger().info("Cone Detection Node has been started.")
-
-        self.model = YOLO('/workspace/src/cone_detection_pkg/cone_detection_pkg/ml_model/best.pt')
+        self.model = YOLO(Path(__file__).parent / "ml_model"/"best.pt")
         self.bridge = CvBridge()
 
         # Subscribers
         self.color_sub = Subscriber(self, Image, '/camera/color/image_raw')
         self.depth_sub = Subscriber(self, Image, '/camera/aligned_depth_to_color/image_raw')
+        
+        # thresholds for box
+        # TODO: specify values
+        self.min_box_size = 50
+        self.max_box_size = 200
 
         # Publisher
         self.publisher_detections = self.create_publisher(DetectionArray, "detections", 10)
@@ -46,6 +51,7 @@ class ConeDetectionNode(Node):
         # Initialize DetectionArray message
         detection_array = DetectionArray()
 
+        
         # Draw bounding boxes and labels on the image
         for result in results:
             boxes = result.boxes.xyxy.cpu().numpy()
@@ -54,6 +60,15 @@ class ConeDetectionNode(Node):
 
             for box, conf, label in zip(boxes, confidences, labels):
                 x1, y1, x2, y2 = box
+
+                # skip bounding box if too small or large
+                box_width = x2 - x1
+                box_height = y2 - y1
+
+                # filter out bounding boxes
+                print(box_width, box_width)
+                if box_width < self.min_box_size or box_height < self.min_box_size or box_width > self.max_box_size or box_height > self.max_box_size:
+                    continue 
 
                 # Draw bounding box
                 cv2.rectangle(color_image_rgb, (int(x1), int(y1)), (int(x2), int(y2)), (255, 0, 0), 2)
@@ -126,7 +141,7 @@ class ConeDetectionNode(Node):
         # Save the annotated image
         timestamp = color_msg.header.stamp.sec  # Use ROS message timestamp
         output_path = f"/workspace/src/cone_detection_pkg/cone_detection_pkg/image/detections_{timestamp}.png"  # Change the path as needed
-        cv2.imwrite(output_path, save_image)
+        #cv2.imwrite(output_path, save_image)
 
         self.get_logger().info(f"Image saved: {output_path}")
 

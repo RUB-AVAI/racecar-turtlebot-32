@@ -10,6 +10,7 @@ setup(
         ('share/ament_index/resource_index/packages',
             ['resource/' + package_name]),
         ('share/' + package_name, ['package.xml']),
+        ("lib/python3.10/site-packages/"+package_name+"/ml_model", [package_name+"/ml_model/best.pt"]),
     ],
     install_requires=['setuptools'],
     zip_safe=True,
@@ -20,6 +21,7 @@ setup(
     tests_require=['pytest'],
     entry_points={
         'console_scripts': [
+            'cone_detection_node = cone_detection_pkg.cone_detection_node:main',
         ],
     },
 )
