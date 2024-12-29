@@ -125,6 +125,7 @@ class ConeDetectionNode(Node):
                 detection.x_center = float(x_center)
                 detection.y_center = float(y_center)
                 detection.z_in_meters = float(z_in_meters)
+                detection.angle = float(self.get_angle(x_center))
                 detection.label = int(label)
 
                 # Append detection to DetectionArray
@@ -144,6 +145,12 @@ class ConeDetectionNode(Node):
         #cv2.imwrite(output_path, save_image)
 
         self.get_logger().info(f"Image saved: {output_path}")
+
+    def get_angle(self, x_center):
+        CAMERA_RGB_FOV = 69  # degrees
+        CAMERA_RGB_PIXEL_WIDTH = 1280 # pixels
+        return x_center *CAMERA_RGB_FOV / CAMERA_RGB_PIXEL_WIDTH
+        
 
 
 def main(args=None):
