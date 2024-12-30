@@ -1,6 +1,6 @@
 cv-bridge==3.2.1
 matplotlib==3.10.0
-numpy==1.26.4
+numpy==1.23.5
 opencv-python==4.10.0.84
 scipy==1.14.1
 seaborn==0.13.2
