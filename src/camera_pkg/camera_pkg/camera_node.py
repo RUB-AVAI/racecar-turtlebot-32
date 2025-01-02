@@ -9,7 +9,6 @@ import numpy as np
 class CameraNode(Node):
     def __init__(self):
         super().__init__('camera_node')
-        self.get_logger().info("Camera node has been started.")
 
         # Initialize the CvBridge object
         self.bridge = CvBridge()
@@ -25,6 +24,8 @@ class CameraNode(Node):
             Image, '/camera/color/image_raw', qos_profile_system_default)
         self.depth_pub = self.create_publisher(
             Image, '/camera/aligned_depth_to_color/image_raw', qos_profile_system_default)
+        
+        self.get_logger().info("Camera node has been started.")
 
     def color_callback(self, msg):  
         try:
