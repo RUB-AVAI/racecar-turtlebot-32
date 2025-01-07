@@ -6,6 +6,7 @@ import sys
 import numpy as np
 from avai_messages.msg import DetectionArrayStamped, OccupancyMapState, ClassedPoint, TurtlebotState
 import message_filters
+from sklearn.cluster import DBSCAN
 
 class OccupancyNode(Node):
     def __init__(self):
@@ -19,7 +20,7 @@ class OccupancyNode(Node):
             DetectionArrayStamped,
             '/detections')
         self.publisher_occupancymap = self.create_publisher(OccupancyMapState, "occupancy_map", 10)
-        self.cone_sync = message_filters.ApproximateTimeSynchronizer([self.subscription_odom, self.subscription_detections], 100, .2)
+        self.cone_sync = message_filters.ApproximateTimeSynchronizer([self.subscription_odom, self.subscription_detections], 1000, .2)
         self.cone_sync.registerCallback(self.callback_synchronised)
 
         #map is a list of points (x,y,classID)
@@ -56,8 +57,7 @@ class OccupancyNode(Node):
         if(not self.turtle_state_is_set):
             self.get_logger().info("Turtlebot state not set yet")
             return
-        
-        #self.get_logger().info('Received cones data')
+
         for detection in msg.detectionarray.detections:
             classID = detection.label
             x = self.turtle_pos[0] + np.cos(detection.angle) * detection.z_in_meters
@@ -65,15 +65,43 @@ class OccupancyNode(Node):
             self.map.append((x, y, classID))
 
     def update_map(self):
-        pass
+        points = self.map
+        self.get_logger().info(f"{len(self.map)} points")
+        dbscan = DBSCAN(eps=0.3, min_samples=2)
+        labels = dbscan.fit_predict(points)
+        clusters = {}
+        for i, label in enumerate(labels):
+            if label != -1:
+                if label not in clusters:
+                    clusters[label] = []
+                clusters[label].append(points[i])
+            else:
+                newLabel = 'outlier'
+                if newLabel not in clusters:
+                    clusters[newLabel] = []
+                clusters[newLabel].append(points[i])
+
+        centroids = []
+        for label, points in clusters.items():
+            if label == 'outlier':
+                for point in points:
+                    centroids.append(point)
+            else:
+                points_arr = np.array(points)
+                centroid = np.mean(points_arr[:,:2],axis=0)
+                centroid = np.append(centroid,points_arr[0,2])
+                centroids.append(tuple(centroid))
+
+        self.map = centroids
 
     def publish_map(self):
+        self.get_logger().info('Publishing map')
         points = []
         for point in self.map:
             cp = ClassedPoint()
             cp.x = point[0]
             cp.y = point[1]
-            cp.c = point[2]
+            cp.c = int(point[2])
             points.append(cp)
 
         turtleState = TurtlebotState()
@@ -81,7 +109,7 @@ class OccupancyNode(Node):
         turtleState.y = self.turtle_pos[1]
         turtleState.angle = self.turtle_angle
 
-        msg = OccupancyMapState(points=points, turtlebotState=turtleState)
+        msg = OccupancyMapState()
         msg.classedpoints = points
         msg.turtle = turtleState
         self.publisher_occupancymap.publish(msg)
