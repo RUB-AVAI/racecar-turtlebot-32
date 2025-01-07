@@ -9,22 +9,35 @@ from PyQt5.QtCore import QTimer, Qt
 from threading import Thread
 from rclpy.executors import MultiThreadedExecutor
 from ackermann_msgs.msg import AckermannDriveStamped
+from avai_messages.msg import OccupancyMapState
+import message_filters
+import matplotlib.pyplot as plt
+from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
+import numpy as np
 
 class GuiNode(Node):
     hmi = None  # MainWindow
     def __init__(self):
         super().__init__('gui_node')
         self.get_logger().info("Gui node has been started.")
+        self.subscription_occupancymap = message_filters.Subscriber(
+            self,
+            OccupancyMapState,
+            '/occupancy_map')
+        self.subscription_occupancymap.registerCallback(self.occupancy_map_callback)
         self.publisher_ = self.create_publisher(AckermannDriveStamped, 'drive', 10)
-
-
+        self.classedpoints = None
+        self.turtle = None
+    def occupancy_map_callback(self, msg):
+        self.classedpoints = msg.classedpoints
+        self.turtle = msg.turtle
 
 class MainWindow(QMainWindow):
     def __init__(self, gui_node):
         super().__init__()
         self.setWindowTitle('Occupancy Map')
         self.setGeometry(100, 100, 600, 600)
-        self.gui_node = gui_node # for publishing messages
+        self.gui_node = gui_node # for receiving and publishing messages (occupancymap and drive)
         # Set focus policy to ensure the window receives key press events
         self.setFocusPolicy(Qt.StrongFocus)
 
@@ -87,13 +100,49 @@ class MainWindow(QMainWindow):
         steering_vel_layout.addWidget(self.steering_vel_input)
         layout.addLayout(steering_vel_layout)
 
+        occupancymap_layout = QHBoxLayout()
+        # Create a Matplotlib figure and canvas
+        self.figure = plt.figure()
+        self.canvas = FigureCanvas(self.figure)
+        occupancymap_layout.addWidget(self.canvas)
+        layout.addLayout(occupancymap_layout)
+
         self.timer = QTimer(self)
         self.timer.timeout.connect(self.update_map)
-        self.timer.start(100)  # Update every 100 ms
+        self.timer.start(1000)  # Update every 1000 ms (1 second)
+
 
     def update_map(self):
-        pass#self.label.setPixmap(self.node.map)
-        #self.node.get_logger().info("Updating map...")
+        # Clear the figure
+        self.figure.clear()
+
+        # Create a scatter plot
+        ax = self.figure.add_subplot(111)
+        x = []
+        y = []
+        color = []
+        if self.gui_node.turtle:
+            # Visualize the turtle's position as a blue dot
+            x.append(self.gui_node.turtle.x)
+            y.append(self.gui_node.turtle.y)
+            color.append(3)  # Turtle color
+            # Visualize the turtle's angle as a red arrow
+            turtle_x = self.gui_node.turtle.x
+            turtle_y = self.gui_node.turtle.y
+            turtle_angle = self.gui_node.turtle.angle
+            ax.quiver(turtle_x, turtle_y, np.cos(turtle_angle), np.sin(turtle_angle), scale=10, color='red')
+        if self.gui_node.classedpoints:
+            for point in self.gui_node.classedpoints:
+                x.append(point.x)
+                y.append(point.y)
+                color.append(point.c)
+        ax.scatter(x, y, c=color, cmap='viridis', vmin=0, vmax=3)
+        ax.set_xlabel('X')
+        ax.set_ylabel('Y')
+        ax.set_title('Occupancy Map')
+
+        # Refresh the canvas
+        self.canvas.draw()    
 
     def keyPressEvent(self, event):
         if not self.checkbox.isChecked() or event.key() not in [Qt.Key_W, Qt.Key_S, Qt.Key_A, Qt.Key_D]:

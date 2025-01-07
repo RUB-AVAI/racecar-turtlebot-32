@@ -22,8 +22,11 @@ class ConeDetectionNode(Node):
         
         # thresholds for box
         # TODO: specify values
-        self.min_box_size = 50
-        self.max_box_size = 200
+        self.min_width = 50
+        self.min_height = 50
+        self.max_width = 200
+        self.max_height = 200
+
 
         # Publisher
         self.publisher_detections = self.create_publisher(DetectionArrayStamped, "detections", 10)
@@ -67,7 +70,7 @@ class ConeDetectionNode(Node):
                 box_height = y2 - y1
 
                 # filter out bounding boxes
-                if box_width < self.min_box_size or box_height < self.min_box_size or box_width > self.max_box_size or box_height > self.max_box_size:
+                if box_width < self.min_width or box_height < self.min_height or box_width > self.max_width or box_height > self.max_height:
                     continue 
 
                 # Draw bounding box
@@ -89,9 +92,11 @@ class ConeDetectionNode(Node):
                         z_in_meters = z_value * 0.001  # If depth values are in millimeters
                         z_text = f"Z: {z_in_meters:.2f} m"
                     else:
+                        continue
                         z_in_meters = float('nan')
                         z_text = "Z: N/A"
                 else:
+                    continue
                     z_in_meters = float('nan')
                     z_text = "Z: Out of bounds"
 

@@ -144,3 +144,4 @@ rosbag/
 
 src/build/
 src/install/
+src/log/
