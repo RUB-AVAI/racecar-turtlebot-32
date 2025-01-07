@@ -4,6 +4,7 @@ from ackermann_msgs.msg import AckermannDriveStamped
 from rclpy.node import Node
 from geometry_msgs.msg import Twist
 from bounding_boxes_msgs.msg import OccupanyMap
+from avai_messages.msg import OccupancyMapState
 import sys
 import termios
 import tty
@@ -18,7 +19,7 @@ class TeleopNode(Node):
         self.last_target = None
         self.get_logger().info("Teleop node has been started.")
         self.publisher_ = self.create_publisher(AckermannDriveStamped, 'drive', 10)
-        self.subscriber_occupany_map = self.create_subscription(OccupanyMap, 'occupancy_map', self.occupancy_callback)
+        self.subscriber_occupany_map = self.create_subscription(OccupanyMapState, 'occupancy_map', self.occupancy_callback)
         self.listener = keyboard.Listener(on_press=self.on_press, on_release=self.on_release, suppress=False)
         self.listener.start()
     
@@ -36,14 +37,15 @@ class TeleopNode(Node):
     
     def occupancy_callback(self, msg):
         self.get_logger().info("Received cone data")
-        points = msg.points
-        rob_pos = msg.rob_pos
+        points = msg.classedpoints
+        rob_pos = msg.turtle
 
         if len(points) < 2:
             self.get_logger().info("Not enough points to determine path")
             return
         
         if self.target is not None:
+            self.get_logger().info(self.target)
             distance_to_last_target = self.calculate_distance(rob_pos, self.target)
             if distance_to_last_target < 0.1:
                 self.last_target = self.target
@@ -52,11 +54,13 @@ class TeleopNode(Node):
             # Find the two nearest points with different labels
             for step in range(5):
                 self.find_nearest_points(points, rob_pos, step)
+                self.get_logger().info("Points: " + points)
                 if self.target is not None:
                     break
 
             if self.target:
                 point1, point2 = self.target
+                self.get_logger().info("Target: " + self.target)
                 midpoint = self.calculate_midpoint(point1, point2)
                 self.drive_to_midpoint(midpoint, rob_pos)
             else:
