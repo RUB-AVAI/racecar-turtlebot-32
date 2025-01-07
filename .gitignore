@@ -141,3 +141,6 @@ rosbag/
 
 # .DS_Store
 .DS_Store
+
+src/build/
+src/install/
