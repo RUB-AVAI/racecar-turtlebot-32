@@ -41,8 +41,9 @@ class Controller(Node):
             return
         
         if self.target is not None:
-            self.get_logger().info(str(self.target))
             distance_to_last_target = self.calculate_distance(self.target, rob_pos)
+            self.get_logger().info(str(self.target))
+            self.get_logger().info(str(distance_to_last_target))
             if distance_to_last_target < 0.1:
                 self.last_target = self.target
                 self.target = None
