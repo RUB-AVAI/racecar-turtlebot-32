@@ -22,8 +22,11 @@ class ConeDetectionNode(Node):
         
         # thresholds for box
         # TODO: specify values
-        self.min_box_size = 50
-        self.max_box_size = 200
+        self.min_width = 50
+        self.min_height = 50
+        self.max_width = 200
+        self.max_height = 200
+
 
         # Publisher
         self.publisher_detections = self.create_publisher(DetectionArrayStamped, "detections", 10)
