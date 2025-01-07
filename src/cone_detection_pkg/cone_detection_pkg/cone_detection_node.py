@@ -70,7 +70,7 @@ class ConeDetectionNode(Node):
                 box_height = y2 - y1
 
                 # filter out bounding boxes
-                if box_width < self.min_box_size or box_height < self.min_box_size or box_width > self.max_box_size or box_height > self.max_box_size:
+                if box_width < self.min_width or box_height < self.min_height or box_width > self.max_width or box_height > self.max_height:
                     continue 
 
                 # Draw bounding box
