@@ -33,3 +33,15 @@ sudo apt install x11-apps -y
 # install torch CPU
 pip3 install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cpu
 ```
+
+# Colcon build and install
+```
+colcon build
+
+source install/setup.bash
+```
+
+# Run packages
+```
+ros2 run package_name node_name
+```
