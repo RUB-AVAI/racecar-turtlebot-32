@@ -7,14 +7,13 @@ import matplotlib.pyplot as plt
 import numpy as np
 from ultralytics import YOLO
 from message_filters import ApproximateTimeSynchronizer, Subscriber
-from avai_messages.msg import Detection, DetectionArray
+from avai_messages.msg import Detection, DetectionArray, DetectionArrayStamped
+from pathlib import Path
 
 class ConeDetectionNode(Node):
     def __init__(self):
         super().__init__('cone_detection_node')
-        self.get_logger().info("Cone Detection Node has been started.")
-
-        self.model = YOLO('/workspace/src/cone_detection_pkg/cone_detection_pkg/ml_model/best.pt')
+        self.model = YOLO(Path(__file__).parent / "ml_model"/"best.pt")
         self.bridge = CvBridge()
 
         # Subscribers
@@ -27,12 +26,14 @@ class ConeDetectionNode(Node):
         self.max_box_size = 200
 
         # Publisher
-        self.publisher_detections = self.create_publisher(DetectionArray, "detections", 10)
+        self.publisher_detections = self.create_publisher(DetectionArrayStamped, "detections", 10)
 
         # Synchronize color and depth topics
         self.ts = ApproximateTimeSynchronizer(
             [self.color_sub, self.depth_sub], queue_size=10, slop=0.1)
         self.ts.registerCallback(self.image_callback)
+
+        self.get_logger().info("Cone Detection Node has been started.")
 
     def image_callback(self, color_msg, depth_msg):
         try:
@@ -121,16 +122,18 @@ class ConeDetectionNode(Node):
 
                 # Create Detection message
                 detection = Detection()
-                detection.x_center = float(x_center)
-                detection.y_center = float(y_center)
                 detection.z_in_meters = float(z_in_meters)
+                detection.angle = float(self.get_angle(x_center))
                 detection.label = int(label)
 
                 # Append detection to DetectionArray
                 detection_array.detections.append(detection)
 
         # Publish DetectionArray message
-        self.publisher_detections.publish(detection_array)
+        detection_array_stamped = DetectionArrayStamped()
+        detection_array_stamped.header = color_msg.header
+        detection_array_stamped.detectionarray = detection_array
+        self.publisher_detections.publish(detection_array_stamped)
 
         # Optionally, save the image using cvbridge
 
@@ -138,11 +141,16 @@ class ConeDetectionNode(Node):
         save_image = cv2.cvtColor(color_image_rgb, cv2.COLOR_RGB2BGR)
 
         # Save the annotated image
-        timestamp = color_msg.header.stamp.sec  # Use ROS message timestamp
-        output_path = f"/workspace/src/cone_detection_pkg/cone_detection_pkg/image/detections_{timestamp}.png"  # Change the path as needed
-        cv2.imwrite(output_path, save_image)
+        #timestamp = color_msg.header.stamp.sec  # Use ROS message timestamp
+        #output_path = f"/workspace/src/cone_detection_pkg/cone_detection_pkg/image/detections_{timestamp}.png"  # Change the path as needed
+        #cv2.imwrite(output_path, save_image)
+        #self.get_logger().info(f"Image saved: {output_path}")
 
-        self.get_logger().info(f"Image saved: {output_path}")
+    def get_angle(self, x_center):
+        CAMERA_RGB_FOV = 69  # degrees
+        CAMERA_RGB_PIXEL_WIDTH = 1280 # pixels
+        return x_center *CAMERA_RGB_FOV / CAMERA_RGB_PIXEL_WIDTH
+        
 
 
 def main(args=None):

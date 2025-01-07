@@ -3,87 +3,99 @@ from rclpy.node import Node
 from nav_msgs.msg import Odometry
 from tf_transformations import euler_from_quaternion
 import sys
-from PyQt5.QtWidgets import QApplication, QMainWindow, QLabel
-from PyQt5.QtGui import QPixmap, QPainter, QColor
-from PyQt5.QtCore import QTimer
+import numpy as np
+from avai_messages.msg import DetectionArrayStamped, OccupancyMapState, ClassedPoint, TurtlebotState
+import message_filters
 
 class OccupancyNode(Node):
     def __init__(self):
         super().__init__('occupancy_node')
-        self.subscription = self.create_subscription(
+        self.subscription_odom = message_filters.Subscriber(
+            self,
             Odometry,
-            '/odom',
-            self.odom_callback,
-            10)
-        self.subscription  # prevent unused variable warning
+            '/odom')
+        self.subscription_detections = message_filters.Subscriber(
+            self,
+            DetectionArrayStamped,
+            '/detections')
+        self.publisher_occupancymap = self.create_publisher(OccupancyMapState, "occupancy_map", 10)
+        self.cone_sync = message_filters.ApproximateTimeSynchronizer([self.subscription_odom, self.subscription_detections], 100, .2)
+        self.cone_sync.registerCallback(self.callback_synchronised)
 
-        self.map_size = 500
-        self.map = QPixmap(self.map_size, self.map_size)
-        self.map.fill(QColor('white'))
-        self.position = (self.map_size // 2, self.map_size // 2)
-
-        self.timer = self.create_timer(2.0, self.timer_callback)
+        #map is a list of points (x,y,classID)
+        self.map = []
+        
+        self.turtle_pos = [float(0), float(0)]
+        self.turtle_angle = float(0)
+        self.turtle_state_is_set = False
+        
+        self.get_logger().info("Occupancy Node has been started.")
+        
+    def callback_synchronised(self, odom, detections):
+        self.odom_callback(odom)
+        self.detections_callback(detections)
+        self.update_map()
+        self.publish_map()
 
     def odom_callback(self, msg):
-        self.get_logger().info('Received odometry data')
         position = msg.pose.pose.position
         orientation = msg.pose.pose.orientation
-        linear_velocity = msg.twist.twist.linear
-        angular_velocity = msg.twist.twist.angular
 
-        self.get_logger().info(f"Position: x={position.x}, y={position.y}, z={position.z}")
-        self.get_logger().info(f"Orientation: x={orientation.x}, y={orientation.y}, z={orientation.z}, w={orientation.w}")
-        self.get_logger().info(f"Linear Velocity: x={linear_velocity.x}, y={linear_velocity.y}, z={linear_velocity.z}")
-        self.get_logger().info(f"Angular Velocity: x={angular_velocity.x}, y={angular_velocity.y}, z={angular_velocity.z}")
+        #self.get_logger().info(f"Position: x={position.x}, y={position.y}, z={position.z}")
+        #self.get_logger().info(f"Orientation: x={orientation.x}, y={orientation.y}, z={orientation.z}, w={orientation.w}")
 
-        r, p, y = euler_from_quaternion([orientation.x, orientation.y, orientation.z, orientation.w])
-        self.get_logger().info(f"Transformed Orientation: r={r}, p={p}, y={y}")
+        r, p, y = euler_from_quaternion([float(orientation.x), float(orientation.y), float(orientation.z), float(orientation.w)])
+        #self.get_logger().info(f"Transformed Orientation: r={r}, p={p}, y={y}")
 
-        # Update the position on the map
-        self.position = (int(position.x * 10) + self.map_size // 2, int(position.y * 10) + self.map_size // 2)
-        self.update_map()
-
-    def update_map(self):
-        painter = QPainter(self.map)
-        painter.setPen(QColor('black'))
-        painter.drawPoint(self.position[0], self.position[1])
-        painter.end()
-
-    def timer_callback(self):
-        self.get_logger().info('occupancynode running')
-
-class MainWindow(QMainWindow):
-    def __init__(self, node):
-        super().__init__()
-        self.node = node
-        self.setWindowTitle('Occupancy Map')
-        self.setGeometry(100, 100, node.map_size, node.map_size)
-        self.label = QLabel(self)
-        self.label.setGeometry(0, 0, node.map_size, node.map_size)
-        self.timer = QTimer(self)
-        self.timer.timeout.connect(self.update_map)
-        self.timer.start(100)  # Update every 100 ms
+        self.turtle_pos[0] = float(position.x)
+        self.turtle_pos[1] = float(position.y)
+        self.turtle_angle = y
+        self.turtle_state_is_set = True
+        
+    def detections_callback(self, msg):
+        if(not self.turtle_state_is_set):
+            self.get_logger().info("Turtlebot state not set yet")
+            return
+        
+        #self.get_logger().info('Received cones data')
+        for detection in msg.detectionarray.detections:
+            classID = detection.label
+            x = self.turtle_pos[0] + np.cos(detection.angle) * detection.z_in_meters
+            y = self.turtle_pos[1] + np.sin(detection.angle) * detection.z_in_meters
+            self.map.append((x, y, classID))
 
     def update_map(self):
-        self.label.setPixmap(self.node.map)
+        pass
+
+    def publish_map(self):
+        points = []
+        for point in self.map:
+            cp = ClassedPoint()
+            cp.x = point[0]
+            cp.y = point[1]
+            cp.c = point[2]
+            points.append(cp)
+
+        turtleState = TurtlebotState()
+        turtleState.x = self.turtle_pos[0]
+        turtleState.y = self.turtle_pos[1]
+        turtleState.angle = self.turtle_angle
+
+        msg = OccupancyMapState(points=points, turtlebotState=turtleState)
+        msg.classedpoints = points
+        msg.turtle = turtleState
+        self.publisher_occupancymap.publish(msg)
 
 def main(args=None):
-    
-    app = QApplication(sys.argv)
     rclpy.init(args=args)
     node = OccupancyNode()
-    window = MainWindow(node)
-    window.show()
-    
-
-
-    #try:
-    #    rclpy.spin(node)
-    #except KeyboardInterrupt:
-    #    pass
-    #node.destroy_node()
-    #rclpy.shutdown()
-    sys.exit(app.exec_())
+    try:
+        rclpy.spin(node)
+    except KeyboardInterrupt:
+        node.get_logger().info("Keyboard Interrupt (SIGINT)")
+    finally:
+        node.destroy_node()
+        rclpy.shutdown()
 
 if __name__ == '__main__':
     main()

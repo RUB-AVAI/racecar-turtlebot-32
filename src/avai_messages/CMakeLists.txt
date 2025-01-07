@@ -11,16 +11,13 @@ find_package(std_msgs REQUIRED)
 find_package(rosidl_default_generators REQUIRED)
 
 rosidl_generate_interfaces(${PROJECT_NAME}
+  "msg/Point.msg"
   "msg/ClassedPoint.msg"
+  "msg/TurtlebotState.msg"
+  "msg/OccupancyMapState.msg"
   "msg/Detection.msg"
   "msg/DetectionArray.msg"
-  "msg/FloatArray.msg"
-  "msg/FloatList.msg"
-  "msg/Point.msg"
-  "msg/PointArray.msg"
-  "msg/Polygon.msg"
-  "msg/Polylines.msg"
-  "msg/TurtlebotState.msg"
+  "msg/DetectionArrayStamped.msg"
 
   DEPENDENCIES std_msgs
 )
