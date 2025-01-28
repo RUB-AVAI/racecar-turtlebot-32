@@ -31,7 +31,7 @@ class ConeDetectionNode(Node):
 
         # Publisher
         self.publisher_detections = self.create_publisher(DetectionArrayStamped, "detections", 10)
-        # self.publisher_detections_images = self.create_publisher(Image, "detections/images", 10)
+        self.publisher_detections_images = self.create_publisher(Image, "detections/images", 10)
 
         # Synchronize color and depth topics
         self.ts = ApproximateTimeSynchronizer(
@@ -150,8 +150,7 @@ class ConeDetectionNode(Node):
         # Save the annotated image
         timestamp = color_msg.header.stamp.sec  # Use ROS message timestamp
         output_path = f"/workspace/src/cone_detection_pkg/cone_detection_pkg/image/detections_{time.time}.png"  # Change the path as needed
-        # self.publisher_detections_images = self.create_publisher(Image, "detections/images", 10)
-        # self.publisher_detections.publish(detection_array_stamped)
+        self.publisher_detections_images.publish(save_image)
         cv2.imwrite(output_path, save_image)
         self.get_logger().info(f"Image saved: {output_path}")
 
