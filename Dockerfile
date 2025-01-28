@@ -14,9 +14,13 @@ ENV ROS_WS=/workspace
 # Copy any setup files (if necessary)
 # COPY ./src /workspace/src
 
+RUN apt-get update && apt install -y python3-pip
+
 # Ensure ROS2 setup is sourced automatically on container start
 RUN echo "source /opt/ros/humble/setup.bash" >> /root/.bashrc
 RUN echo "source /workspace/src/install/local_setup.bash" >> /root/.bashrc
+RUN echo "source /workspace/src/install/setup.bash" >> /root/.bashrc
+
 
 # Default working directory (it can be overwritten by volume)
 WORKDIR /workspace

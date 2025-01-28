@@ -6,8 +6,9 @@ services:
       - ./src:/workspace/src  # Das src-Verzeichnis auf deinem Host wird in den Container gemountet
       - ./rosbag:/workspace/rosbag
       - ./README.md:/workspace/README.md
+      - ./requirements.txt:/workspace/README.md
     environment:
-      - DISPLAY=${DISPLAY}  # Falls du grafische Anwendungen verwenden möchtest
+      - DISPLAY=${DISPLAY} 
     network_mode: "host"  # Optional, wenn du ROS2 Nodes über das Netzwerk verbinden möchtest
     stdin_open: true
     tty: true
