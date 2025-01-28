@@ -10,6 +10,7 @@ setup(
         ('share/ament_index/resource_index/packages',
             ['resource/' + package_name]),
         ('share/' + package_name, ['package.xml']),
+        ("lib/python3.10/site-packages/"+package_name+"/tf_transform.py", [package_name+"/tf_transform.py"]),
     ],
     install_requires=['setuptools', 'tf-transformations'],
     zip_safe=True,

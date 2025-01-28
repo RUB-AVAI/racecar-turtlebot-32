@@ -20,7 +20,7 @@ setup(
     tests_require=['pytest'],
     entry_points={
         'console_scripts': [
-            "teleop_node = controller.teleop_node:main",
+            "controller = controller.controller:main",
         ],
     },
 )

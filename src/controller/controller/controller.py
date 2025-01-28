@@ -3,25 +3,21 @@ from rclpy.qos import qos_profile_system_default
 from ackermann_msgs.msg import AckermannDriveStamped
 from rclpy.node import Node
 from geometry_msgs.msg import Twist
-from bounding_boxes_msgs.msg import OccupanyMap
 from avai_messages.msg import OccupancyMapState
 import sys
 import termios
 import tty
 from math import atan2, copysign, radians, cos, sin, sqrt
-from pynput import keyboard
 import math
 
-class TeleopNode(Node):
+class Controller(Node):
     def __init__(self):
-        super().__init__('teleop_node')
+        super().__init__('controller')
         self.target = None
         self.last_target = None
         self.get_logger().info("Teleop node has been started.")
         self.publisher_ = self.create_publisher(AckermannDriveStamped, 'drive', 10)
-        self.subscriber_occupany_map = self.create_subscription(OccupanyMapState, 'occupancy_map', self.occupancy_callback)
-        self.listener = keyboard.Listener(on_press=self.on_press, on_release=self.on_release, suppress=False)
-        self.listener.start()
+        self.subscriber_occupany_map = self.create_subscription(OccupancyMapState, 'occupancy_map', self.occupancy_callback, qos_profile_system_default)
     
     def run(self):
         settings = termios.tcgetattr(sys.stdin)
@@ -45,8 +41,9 @@ class TeleopNode(Node):
             return
         
         if self.target is not None:
-            self.get_logger().info(self.target)
-            distance_to_last_target = self.calculate_distance(rob_pos, self.target)
+            distance_to_last_target = self.calculate_distance(self.target, rob_pos)
+            self.get_logger().info(str(self.target))
+            self.get_logger().info(str(distance_to_last_target))
             if distance_to_last_target < 0.1:
                 self.last_target = self.target
                 self.target = None
@@ -54,13 +51,12 @@ class TeleopNode(Node):
             # Find the two nearest points with different labels
             for step in range(5):
                 self.find_nearest_points(points, rob_pos, step)
-                self.get_logger().info("Points: " + points)
                 if self.target is not None:
                     break
 
             if self.target:
                 point1, point2 = self.target
-                self.get_logger().info("Target: " + self.target)
+                self.get_logger().info("Target: " + str(self.target))
                 midpoint = self.calculate_midpoint(point1, point2)
                 self.drive_to_midpoint(midpoint, rob_pos)
             else:
@@ -74,23 +70,23 @@ class TeleopNode(Node):
         blue = []
         # use a 90 degree vector to decide if a point is in front of the bot or not
         # vector goes from bot position to a point (x2,y2) in the direction of the vector
-        vect_angle = radians(rob_pos["angle"] + 90)
+        vect_angle = radians(rob_pos.angle + 90)
 
         line_distance = 0.05
-        x1 = cos(rob_pos["angle"]) * line_distance*line_step + rob_pos["x"]
-        y1 = sin(rob_pos["angle"]) * line_distance*line_step + rob_pos["y"]
-        x2 = cos(vect_angle) * 2 + rob_pos["x"]
-        y2 = sin(vect_angle) * 2 + rob_pos["y"]
+        x1 = cos(rob_pos.angle) * line_distance*line_step + rob_pos.x
+        y1 = sin(rob_pos.angle) * line_distance*line_step + rob_pos.y
+        x2 = cos(vect_angle) * 2 + rob_pos.x
+        y2 = sin(vect_angle) * 2 + rob_pos.y
         for point in points:
             # check if point is "left" or "right" of vector
-            front = sign((x2 - x1) * (point[1] - y1) - (y2 - y1) * (point[0] - x1))
+            front = sign((x2 - x1) * (point.y - y1) - (y2 - y1) * (point.x - x1))
             if front < 0:
-                distance = sqrt((point[0] - rob_pos["x"]) ** 2 + (point[1] - rob_pos["y"]) ** 2)
+                distance = sqrt((point.x - rob_pos.x) ** 2 + (point.y - rob_pos.y) ** 2)
                 if distance <= distance_threshold:
                     self.get_logger().info(f"conedistance: {distance}")
-                    if point[2] == 0:
+                    if point.c == 2:
                         blue.append([point, distance])
-                    if point[2] == 2:
+                    if point.c == 0:
                         yellow.append([point, distance])
         if len(yellow) == 0:
             self.get_logger().info("no yellow cones")
@@ -111,19 +107,20 @@ class TeleopNode(Node):
             min_yellow = yellow[0][0]
             min_blue = blue[0][0]
 
-            middle_point = ((min_yellow[0] - min_blue[0]) * 0.5 + min_blue[0],
-                            (min_yellow[1] - min_blue[1]) * 0.5 + min_blue[1])
+            middle_point = ((min_yellow.x - min_blue.x) * 0.5 + min_blue.x,
+                            (min_yellow.y - min_blue.y) * 0.5 + min_blue.y)
+            
+            self.get_logger().info("Middle Point:" + str(middle_point))
 
-            self.get_logger().info(str(middle_point))
             if self.target == None:
                 self.target = middle_point
 
     def calculate_distance(self, point1, point2):
-        return math.sqrt((point1.x - point2.x) ** 2 + (point1.y - point2.y) ** 2)
+        return math.sqrt((point1[0] - point2.x) ** 2 + (point1[1] - point2.y) ** 2)
 
     def calculate_midpoint(self, point1, point2):
-        midpoint_x = (point1.x + point2.x) / 2
-        midpoint_y = (point1.y + point2.y) / 2
+        midpoint_x = (point1 + point2) / 2
+        midpoint_y = (point1 + point2) / 2
         return midpoint_x, midpoint_y
 
     def drive_to_midpoint(self, midpoint, rob_pos):
@@ -180,10 +177,15 @@ class TeleopNode(Node):
 
 def main(args=None):
     rclpy.init(args=args)
-    node = TeleopNode()
-    rclpy.spin(node)
-    node.destroy_node()
-    rclpy.shutdown()
+    node = Controller()
+    try:
+        rclpy.spin(node)
+    except KeyboardInterrupt:
+        node.get_logger().info("Keyboard Interrupt (SIGINT)")
+    finally:
+        node.destroy_node()
+        rclpy.shutdown()
+
 
 if __name__ == '__main__':
     main()
