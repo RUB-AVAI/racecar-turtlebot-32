@@ -1,15 +1,15 @@
 import rclpy
 from rclpy.node import Node
-from nav_msgs.msg import Odometry
-from tf_transformations import euler_from_quaternion
 import sys
+from nav_msgs.msg import Odometry
 from PyQt5.QtWidgets import QApplication, QMainWindow, QLabel, QCheckBox, QDoubleSpinBox, QVBoxLayout, QWidget, QWidget, QHBoxLayout
-from PyQt5.QtGui import QPixmap, QPainter, QColor
+from PyQt5.QtGui import QPixmap, QPainter, QColor, QImage
 from PyQt5.QtCore import QTimer, Qt
 from threading import Thread
 from rclpy.executors import MultiThreadedExecutor
 from ackermann_msgs.msg import AckermannDriveStamped
 from avai_messages.msg import OccupancyMapState
+from sensor_msgs.msg import Image
 import message_filters
 import matplotlib.pyplot as plt
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
@@ -20,17 +20,52 @@ class GuiNode(Node):
     def __init__(self):
         super().__init__('gui_node')
         self.get_logger().info("Gui node has been started.")
+        # Subscribe to the occupancy map and camera topics
         self.subscription_occupancymap = message_filters.Subscriber(
             self,
             OccupancyMapState,
             '/occupancy_map')
+        self.subscription_camera = message_filters.Subscriber(
+            self,
+            Image,
+            '/camera/color/image_raw')
+        self.subscription_odom = message_filters.Subscriber(
+            self,
+            Odometry,
+            '/odom')
         self.subscription_occupancymap.registerCallback(self.occupancy_map_callback)
+        self.subscription_camera.registerCallback(self.camera_callback)
+        # self.subscription_odom.registerCallback(self.callback_test)
         self.publisher_ = self.create_publisher(AckermannDriveStamped, 'drive', 10)
+        self.image = None
         self.classedpoints = None
         self.turtle = None
+    # def callback_test(self, msg):
+        # self.get_logger().info('Received odometry data')
+        # # Process the odometry data here
+        # position = msg.pose.pose.position
+        # orientation = msg.pose.pose.orientation
+        # linear_velocity = msg.twist.twist.linear
+        # angular_velocity = msg.twist.twist.angular
+
+        # self.get_logger().info(f"Position: x={position.x}, y={position.y}, z={position.z}")
+        # self.get_logger().info(f"Orientation: x={orientation.x}, y={orientation.y}, z={orientation.z}, w={orientation.w}")
+        # self.get_logger().info(f"Linear Velocity: x={linear_velocity.x}, y={linear_velocity.y}, z={linear_velocity.z}")
+        # self.get_logger().info(f"Angular Velocity: x={angular_velocity.x}, y={angular_velocity.y}, z={angular_velocity.z}")
+
     def occupancy_map_callback(self, msg):
         self.classedpoints = msg.classedpoints
         self.turtle = msg.turtle
+    def camera_callback(self, msg):
+        # Convert the ROS Image message to a QImage
+        self.get_logger().info("received camera msg")
+        height = msg.height
+        width = msg.width
+        channels = 3  # Assuming RGB8 encoding
+        bytes_per_line = channels * width
+        q_image = QImage(msg.data, width, height, bytes_per_line, QImage.Format_RGB888)
+        # Emit the signal to update the image in the GUI
+        self.hmi.update_image(q_image)
 
 class MainWindow(QMainWindow):
     def __init__(self, gui_node):
@@ -107,13 +142,28 @@ class MainWindow(QMainWindow):
         occupancymap_layout.addWidget(self.canvas)
         layout.addLayout(occupancymap_layout)
 
+        video_layout = QHBoxLayout()
+        # Create a label to display the video
+        self.video_text_label = QLabel('VIDEO SHOULD BE HERE', self)
+        self.video_label = QLabel(self)
+        video_layout.addWidget(self.video_label)
+        video_layout.addWidget(self.video_text_label)
+        layout.addLayout(video_layout)
+
         self.timer = QTimer(self)
+        self.timer.timeout.connect(self.update_video)
         self.timer.timeout.connect(self.update_map)
         self.timer.start(1000)  # Update every 1000 ms (1 second)
+        
+    def update_image(self, q_image):
+        self.video_label.setPixmap(QPixmap.fromImage(q_image))
 
+    def update_video(self):
+        if self.gui_node.image is not None:
+            self.video_label.setPixmap(QPixmap.fromImage(self.gui_node.image))
 
     def update_map(self):
-        self.gui_node.get_logger().info("Updating map....")
+        #self.gui_node.get_logger().info("Updating map....")
         # Clear the figure
         self.figure.clear()
 
