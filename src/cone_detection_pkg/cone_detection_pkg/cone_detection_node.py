@@ -149,10 +149,10 @@ class ConeDetectionNode(Node):
 
         # Save the annotated image
         timestamp = color_msg.header.stamp.sec  # Use ROS message timestamp
-        output_path = f"/workspace/src/cone_detection_pkg/cone_detection_pkg/image/detections_{time.time}.png"  # Change the path as needed
-        self.publisher_detections_images.publish(save_image)
-        cv2.imwrite(output_path, save_image)
-        self.get_logger().info(f"Image saved: {output_path}")
+        #output_path = f"/workspace/src/cone_detection_pkg/cone_detection_pkg/image/detections_{time.time}.png"  # Change the path as needed
+        #self.publisher_detections_images.publish(save_image)
+        #cv2.imwrite(output_path, save_image)
+        #self.get_logger().info(f"Image saved: {output_path}")
 
     def get_angle(self, x_center):
         CAMERA_RGB_FOV = 69  # degrees
