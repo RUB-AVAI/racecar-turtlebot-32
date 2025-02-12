@@ -31,13 +31,13 @@ class OccupancyNode(Node):
 
         #map is a list of points (x,y,classID)
         self.map = []
-        
+
         self.turtle_pos = [float(0), float(0)]
         self.turtle_angle = float(0)
         self.turtle_state_is_set = False
-        
+
         self.get_logger().info("Occupancy Node has been started.")
-        
+
     def callback_synchronised(self, odom, detections):
         self.odom_callback(odom)
         self.detections_callback(detections)
@@ -66,22 +66,24 @@ class OccupancyNode(Node):
         self.turtle_pos[1] = float(position.y)
         self.turtle_angle = y
         self.turtle_state_is_set = True
-        
+
     def detections_callback(self, msg):
         if(not self.turtle_state_is_set):
             self.get_logger().info("Turtlebot state not set yet")
             return
 
         for detection in msg.detectionarray.detections:
+            if detection.z_in_meters > 0.75:
+                continue
             classID = detection.label
-            x = self.turtle_pos[0] + np.cos(detection.angle) * detection.z_in_meters
-            y = self.turtle_pos[1] + np.sin(detection.angle) * detection.z_in_meters
+            x = self.turtle_pos[0] + np.cos(detection.angle + self.turtle_angle) * detection.z_in_meters
+            y = self.turtle_pos[1] + np.sin(detection.angle + self.turtle_angle) * detection.z_in_meters
             self.map.append((x, y, classID))
 
     def update_map(self):
         points = self.map
         self.get_logger().info(f"{len(self.map)} points")
-        dbscan = DBSCAN(eps=0.3, min_samples=2)
+        dbscan = DBSCAN(eps=0.35, min_samples=2)
         labels = dbscan.fit_predict(points)
         clusters = {}
         for i, label in enumerate(labels):
