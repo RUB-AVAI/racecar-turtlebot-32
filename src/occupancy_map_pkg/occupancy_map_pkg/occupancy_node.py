@@ -5,6 +5,7 @@ from .tf_transform import euler_from_quaternion
 import sys
 import numpy as np
 from avai_messages.msg import DetectionArrayStamped, OccupancyMapState, ClassedPoint, TurtlebotState
+from std_msgs.msg import Bool
 import message_filters
 from sklearn.cluster import DBSCAN
 
@@ -19,9 +20,14 @@ class OccupancyNode(Node):
             self,
             DetectionArrayStamped,
             '/detections')
+        self.subscription_reset_occupancy_map = message_filters.Subscriber(
+            self,
+            Bool,
+            '/reset_occupancy_map')
         self.publisher_occupancymap = self.create_publisher(OccupancyMapState, "occupancy_map", 10)
         self.cone_sync = message_filters.ApproximateTimeSynchronizer([self.subscription_odom, self.subscription_detections], 1000, .2)
         self.cone_sync.registerCallback(self.callback_synchronised)
+        self.subscription_reset_occupancy_map.registerCallback(self.callback_reset_occupancy_map)
 
         #map is a list of points (x,y,classID)
         self.map = []
@@ -37,6 +43,14 @@ class OccupancyNode(Node):
         self.detections_callback(detections)
         self.update_map()
         self.publish_map()
+
+    def callback_reset_occupancy_map(self, msg):
+        self.get_logger().info("Resetting occupancy map")
+        if msg.data:
+            self.map = []
+            self.turtle_pos = [float(0), float(0)]
+            self.turtle_angle = float(0)
+            self.turtle_state_is_set = False
 
     def odom_callback(self, msg):
         position = msg.pose.pose.position

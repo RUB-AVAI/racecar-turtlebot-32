@@ -2,13 +2,15 @@ import rclpy
 from rclpy.node import Node
 import sys
 from nav_msgs.msg import Odometry
-from PyQt5.QtWidgets import QApplication, QMainWindow, QLabel, QCheckBox, QDoubleSpinBox, QVBoxLayout, QWidget, QWidget, QHBoxLayout
+from PyQt5.QtWidgets import QApplication, QMainWindow, QLabel, QCheckBox, QDoubleSpinBox, QVBoxLayout, QWidget, QWidget, QHBoxLayout, QPushButton
+from rclpy.qos import qos_profile_system_default
 from PyQt5.QtGui import QPixmap, QPainter, QColor, QImage
 from PyQt5.QtCore import QTimer, Qt
 from threading import Thread
 from rclpy.executors import MultiThreadedExecutor
 from ackermann_msgs.msg import AckermannDriveStamped
 from avai_messages.msg import OccupancyMapState
+from std_msgs.msg import Bool
 from sensor_msgs.msg import Image
 import message_filters
 import matplotlib.pyplot as plt
@@ -34,6 +36,9 @@ class GuiNode(Node):
             'detections/images',
             self.annotated_image_callback,
             10)
+        self.reset_occupancy_map = self.create_publisher(
+            Bool, '/reset_occupancy_map', qos_profile_system_default)
+
         self.subscription_occupancymap.registerCallback(self.occupancy_map_callback)
         # self.subscription_odom.registerCallback(self.callback_test)
         self.publisher_ = self.create_publisher(AckermannDriveStamped, 'drive', 10)
@@ -137,6 +142,12 @@ class MainWindow(QMainWindow):
         steering_vel_layout.addWidget(self.steering_vel_input)
         layout.addLayout(steering_vel_layout)
 
+        # RESET OCCUPANCY MAP BUTTON
+        self.reset_button = QPushButton('Reset Occupancy Map', self)
+        self.reset_button.setGeometry(10, 130, 150, 30)
+        self.reset_button.clicked.connect(self.reset_occupancy_map)
+        layout.addWidget(self.reset_button)
+
         occupancymap_layout = QHBoxLayout()
         # Create a Matplotlib figure and canvas
         self.figure = plt.figure()
@@ -157,6 +168,12 @@ class MainWindow(QMainWindow):
         self.timer.timeout.connect(self.update_video)
         self.timer.timeout.connect(self.update_map)
         self.timer.start(1000)  # Update every 1000 ms (1 second)
+
+    def reset_occupancy_map(self):
+        self.gui_node.get_logger().info("Resetting occupancy map")
+        msg = Bool()
+        msg.data = True
+        self.gui_node.reset_occupancy_map.publish(msg)
 
     def update_image(self, q_image):
         self.video_label.setPixmap(QPixmap.fromImage(q_image))
