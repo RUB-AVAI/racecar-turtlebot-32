@@ -25,6 +25,8 @@ ROS2 Humble must already be set up.
 
 ```
 pip3 install -r requirements.txt # "numpy<2"
+# make sure only one matplotlib version (pip version) is installed
+sudo apt remove python3-matplotlib
 # sudo apt-get install ros-humble-tf-transformations #DONT NEED THIS ANYMORE
 
 # if using GUI in WSL
