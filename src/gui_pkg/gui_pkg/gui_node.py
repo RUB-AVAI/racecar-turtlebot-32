@@ -139,22 +139,23 @@ class MainWindow(QMainWindow):
         # Create a Matplotlib figure and canvas
         self.figure = plt.figure()
         self.canvas = FigureCanvas(self.figure)
+        self.canvas.setFixedSize(320, 240)
         occupancymap_layout.addWidget(self.canvas)
         layout.addLayout(occupancymap_layout)
 
         video_layout = QHBoxLayout()
         # Create a label to display the video
-        self.video_text_label = QLabel('VIDEO SHOULD BE HERE', self)
         self.video_label = QLabel(self)
+        self.video_label.setFixedSize(640, 480)
+        self.video_label.setScaledContents(True)  # Enable scaled contents
         video_layout.addWidget(self.video_label)
-        video_layout.addWidget(self.video_text_label)
         layout.addLayout(video_layout)
 
         self.timer = QTimer(self)
         self.timer.timeout.connect(self.update_video)
         self.timer.timeout.connect(self.update_map)
         self.timer.start(1000)  # Update every 1000 ms (1 second)
-        
+
     def update_image(self, q_image):
         self.video_label.setPixmap(QPixmap.fromImage(q_image))
 
@@ -193,7 +194,7 @@ class MainWindow(QMainWindow):
         ax.set_title('Occupancy Map')
 
         # Refresh the canvas
-        self.canvas.draw()    
+        self.canvas.draw()
     def keyPressEvent(self, event):
         if not self.checkbox.isChecked() or event.key() not in [Qt.Key_W, Qt.Key_S, Qt.Key_A, Qt.Key_D]:
             print("nothing")
@@ -223,7 +224,7 @@ class MainWindow(QMainWindow):
             msg.drive.steering_angle = -steering_value
             msg.drive.steering_angle_velocity = steering_velocity_value
             print("D key pressed")
-        
+
         self.gui_node.publisher_.publish(msg)
 
 def main(args=None):
