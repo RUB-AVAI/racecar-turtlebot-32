@@ -141,7 +141,7 @@ class MainWindow(QMainWindow):
         # Create a Matplotlib figure and canvas
         self.figure = plt.figure()
         self.canvas = FigureCanvas(self.figure)
-        self.canvas.setFixedSize(320, 240)
+        self.canvas.setFixedSize(480, 360)
         occupancymap_layout.addWidget(self.canvas)
         layout.addLayout(occupancymap_layout)
 
