@@ -6,3 +6,5 @@ scipy==1.14.1
 seaborn==0.13.2
 ultralytics==8.3.55
 PyQt5==5.15.9
+transforms3d==0.4.2
+scikit-learn==1.6.1
