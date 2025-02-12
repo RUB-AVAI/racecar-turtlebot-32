@@ -72,11 +72,13 @@ class ConeDetectionNode(Node):
                 box_height = y2 - y1
 
                 # filter out bounding boxes
-                if box_width < self.min_width or box_height < self.min_height or box_width > self.max_width or box_height > self.max_height:
-                    continue
+                #if box_width < self.min_width or box_height < self.min_height or box_width > self.max_width or box_height > self.max_height:
+                #    continue
+
+                colors=[(255,0,0), (0,209,134), (0,255,255)]
 
                 # Draw bounding box
-                cv2.rectangle(color_image_rgb, (int(x1), int(y1)), (int(x2), int(y2)), (255, 0, 0), 2)
+                cv2.rectangle(color_image_rgb, (int(x1), int(y1)), (int(x2), int(y2)), colors[int(label)], 2)
 
                 # Calculate center of bounding box
                 x_center = int((x1 + x2) / 2)
@@ -112,7 +114,7 @@ class ConeDetectionNode(Node):
                     (x_center + 10, y_center),
                     cv2.FONT_HERSHEY_SIMPLEX,
                     0.5,
-                    (0, 255, 0),
+                    colors[int(label)],
                     2,
                 )
 
@@ -123,7 +125,7 @@ class ConeDetectionNode(Node):
                     (int(x1), int(y1) - 10),
                     cv2.FONT_HERSHEY_SIMPLEX,
                     0.5,
-                    (255, 0, 0),
+                    colors[int(label)],
                     2,
                 )
 

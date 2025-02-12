@@ -152,7 +152,7 @@ class MainWindow(QMainWindow):
         # Create a Matplotlib figure and canvas
         self.figure = plt.figure()
         self.canvas = FigureCanvas(self.figure)
-        self.canvas.setFixedSize(320, 240)
+        self.canvas.setFixedSize(480, 360)
         occupancymap_layout.addWidget(self.canvas)
         layout.addLayout(occupancymap_layout)
 
@@ -196,7 +196,7 @@ class MainWindow(QMainWindow):
             # Visualize the turtle's position as a blue dot
             x.append(self.gui_node.turtle.x)
             y.append(self.gui_node.turtle.y)
-            color.append(3)  # Turtle color
+            color.append("red")  # Turtle color
             # Visualize the turtle's angle as a red arrow
             turtle_x = self.gui_node.turtle.x
             turtle_y = self.gui_node.turtle.y
@@ -206,8 +206,15 @@ class MainWindow(QMainWindow):
             for point in self.gui_node.classedpoints:
                 x.append(point.x)
                 y.append(point.y)
-                color.append(point.c)
-        ax.scatter(x, y, c=color, cmap='viridis', vmin=0, vmax=3)
+                if point.c == 0:
+                    color.append('blue')
+                elif point.c == 1:
+                    color.append('orange')
+                elif point.c == 2:
+                    color.append('yellow')
+                else:
+                    color.append('green')
+        ax.scatter(x, y, c=color)
         ax.set_xlabel('X')
         ax.set_ylabel('Y')
         ax.set_title('Occupancy Map')
