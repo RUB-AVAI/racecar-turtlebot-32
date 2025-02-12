@@ -20,7 +20,7 @@ class ConeDetectionNode(Node):
         # Subscribers
         self.color_sub = Subscriber(self, Image, '/camera/color/image_raw')
         self.depth_sub = Subscriber(self, Image, '/camera/aligned_depth_to_color/image_raw')
-        
+
         # thresholds for box
         # TODO: specify values
         self.min_width = 50
@@ -57,7 +57,7 @@ class ConeDetectionNode(Node):
         # Initialize DetectionArray message
         detection_array = DetectionArray()
 
-        
+
         # Draw bounding boxes and labels on the image
         for result in results:
             boxes = result.boxes.xyxy.cpu().numpy()
@@ -73,7 +73,7 @@ class ConeDetectionNode(Node):
 
                 # filter out bounding boxes
                 if box_width < self.min_width or box_height < self.min_height or box_width > self.max_width or box_height > self.max_height:
-                    continue 
+                    continue
 
                 # Draw bounding box
                 cv2.rectangle(color_image_rgb, (int(x1), int(y1)), (int(x2), int(y2)), (255, 0, 0), 2)
@@ -145,7 +145,13 @@ class ConeDetectionNode(Node):
         # Optionally, save the image using cvbridge
 
         # Convert RGB image back to BGR for saving
+        # Convert RGB image back to BGR for saving
         save_image = cv2.cvtColor(color_image_rgb, cv2.COLOR_RGB2BGR)
+
+        # Convert the annotated image to a ROS Image message
+        annotated_image_msg = self.bridge.cv2_to_imgmsg(save_image, encoding='bgr8')
+        annotated_image_msg.header = color_msg.header
+        self.publisher_detections_images.publish(annotated_image_msg)
 
         # Save the annotated image
         timestamp = color_msg.header.stamp.sec  # Use ROS message timestamp
@@ -158,7 +164,7 @@ class ConeDetectionNode(Node):
         CAMERA_RGB_FOV = 69  # degrees
         CAMERA_RGB_PIXEL_WIDTH = 1280 # pixels
         return x_center *CAMERA_RGB_FOV / CAMERA_RGB_PIXEL_WIDTH
-        
+
 
 
 def main(args=None):

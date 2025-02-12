@@ -25,16 +25,16 @@ class GuiNode(Node):
             self,
             OccupancyMapState,
             '/occupancy_map')
-        self.subscription_camera = message_filters.Subscriber(
-            self,
-            Image,
-            '/camera/color/image_raw')
         self.subscription_odom = message_filters.Subscriber(
             self,
             Odometry,
             '/odom')
+        self.subscription_annotated_image = self.create_subscription(
+            Image,
+            'detections/images',
+            self.annotated_image_callback,
+            10)
         self.subscription_occupancymap.registerCallback(self.occupancy_map_callback)
-        self.subscription_camera.registerCallback(self.camera_callback)
         # self.subscription_odom.registerCallback(self.callback_test)
         self.publisher_ = self.create_publisher(AckermannDriveStamped, 'drive', 10)
         self.image = None
@@ -56,16 +56,18 @@ class GuiNode(Node):
     def occupancy_map_callback(self, msg):
         self.classedpoints = msg.classedpoints
         self.turtle = msg.turtle
-    def camera_callback(self, msg):
+    def annotated_image_callback(self, msg):
         # Convert the ROS Image message to a QImage
-        self.get_logger().info("received camera msg")
-        height = msg.height
-        width = msg.width
-        channels = 3  # Assuming RGB8 encoding
-        bytes_per_line = channels * width
-        q_image = QImage(msg.data, width, height, bytes_per_line, QImage.Format_RGB888)
-        # Emit the signal to update the image in the GUI
-        self.hmi.update_image(q_image)
+        self.get_logger().info("Received annotated image")
+        try:
+            height = msg.height
+            width = msg.width
+            channels = 3  # Assuming BGR8 encoding
+            bytes_per_line = channels * width
+            q_image = QImage(msg.data, width, height, bytes_per_line, QImage.Format_RGB888)
+            self.hmi.update_image(q_image)
+        except Exception as e:
+            self.get_logger().error('Failed to convert annotated image: %s' % str(e))
 
 class MainWindow(QMainWindow):
     def __init__(self, gui_node):
