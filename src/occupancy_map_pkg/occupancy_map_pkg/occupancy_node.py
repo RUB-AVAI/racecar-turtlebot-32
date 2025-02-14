@@ -78,18 +78,27 @@ class OccupancyNode(Node):
             if detection.z_in_meters < 0.35:
                 continue
             classID = detection.label
-            angle = np.deg2rad(detection.angle)
+            angle = np.deg2rad(detection.angle) + self.turtle_angle
             turtle_angle = self.turtle_angle
             distance = detection.z_in_meters
-            x = self.turtle_pos[0] - np.cos(angle + self.turtle_angle) * detection.z_in_meters
-            y = self.turtle_pos[1] - np.sin(angle + self.turtle_angle) * detection.z_in_meters
+
+            if classID == 2 and np.deg2rad(detection.angle) < 0:
+                continue
+
+            if classID == 0 and np.deg2rad(detection.angle) > 0:
+                continue
+
+            x = self.turtle_pos[0] - np.cos(angle) * detection.z_in_meters
+            y = self.turtle_pos[1] - np.sin(angle) * detection.z_in_meters
             self.get_logger().info(f"Detection: classID={classID}, angle={angle}, turtle_angle={turtle_angle}, distance={distance}, x={x}, y={y}")
             self.map.append((x, y, classID))
 
     def update_map(self):
         points = self.map
         self.get_logger().info(f"{len(self.map)} points")
-        dbscan = DBSCAN(eps=0.3, min_samples=2)
+        dbscan = DBSCAN(eps=0.12, min_samples=2)
+        if not points:
+            return
         labels = dbscan.fit_predict(points)
         clusters = {}
         for i, label in enumerate(labels):

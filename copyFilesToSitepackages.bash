@@ -14,7 +14,7 @@ FILES_TO_COPY=(
 
 for SOURCE in "${!FILES_TO_COPY[@]}"; do
     DESTINATION="${FILES_TO_COPY[$SOURCE]}"
-    
+
     if [ -f "$SOURCE" ]; then
         cp "$SOURCE" "$DESTINATION"
         echo "Copy: $SOURCE -> $DESTINATION"

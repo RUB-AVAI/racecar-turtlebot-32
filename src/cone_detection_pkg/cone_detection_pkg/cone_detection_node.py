@@ -166,8 +166,9 @@ class ConeDetectionNode(Node):
 
     def get_angle(self, x_center):
         CAMERA_RGB_FOV = 69  # degrees
-        CAMERA_RGB_PIXEL_WIDTH = 640  # pixels
-        return x_center * CAMERA_RGB_FOV / CAMERA_RGB_PIXEL_WIDTH
+        CAMERA_RGB_PIXEL_WIDTH = 840  # pixels
+        angle = (x_center - (CAMERA_RGB_PIXEL_WIDTH / 2)) * (CAMERA_RGB_FOV / CAMERA_RGB_PIXEL_WIDTH)
+        return angle
 
 
 
