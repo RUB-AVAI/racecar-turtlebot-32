@@ -135,6 +135,8 @@ class ConeDetectionNode(Node):
                 detection.angle = float(self.get_angle(x_center))
                 detection.label = int(label)
 
+                self.get_logger().info(f"Detection: classID={detection.label}, angle={detection.angle}, distance={detection.z_in_meters}, x_center={x_center}, y_center={y_center}")
+
                 # Append detection to DetectionArray
                 detection_array.detections.append(detection)
 
@@ -164,9 +166,8 @@ class ConeDetectionNode(Node):
 
     def get_angle(self, x_center):
         CAMERA_RGB_FOV = 69  # degrees
-        CAMERA_RGB_PIXEL_WIDTH = 1280  # pixels
-        angle = (x_center - (CAMERA_RGB_PIXEL_WIDTH / 2)) * (CAMERA_RGB_FOV / CAMERA_RGB_PIXEL_WIDTH)
-        return angle
+        CAMERA_RGB_PIXEL_WIDTH = 640  # pixels
+        return x_center * CAMERA_RGB_FOV / CAMERA_RGB_PIXEL_WIDTH
 
 
 

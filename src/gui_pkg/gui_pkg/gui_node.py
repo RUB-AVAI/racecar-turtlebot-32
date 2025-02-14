@@ -201,7 +201,7 @@ class MainWindow(QMainWindow):
             turtle_x = self.gui_node.turtle.x
             turtle_y = self.gui_node.turtle.y
             turtle_angle = self.gui_node.turtle.angle
-            ax.quiver(turtle_x, turtle_y, np.cos(turtle_angle), np.sin(turtle_angle), scale=10, color='red')
+            ax.quiver(turtle_x, turtle_y, -np.cos(turtle_angle), -np.sin(turtle_angle), scale=10, color='red')
         if self.gui_node.classedpoints:
             for point in self.gui_node.classedpoints:
                 x.append(point.x)
