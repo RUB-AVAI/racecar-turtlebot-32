@@ -62,9 +62,9 @@ class OccupancyNode(Node):
         r, p, y = euler_from_quaternion([float(orientation.x), float(orientation.y), float(orientation.z), float(orientation.w)])
         #self.get_logger().info(f"Transformed Orientation: r={r}, p={p}, y={y}")
 
-        self.turtle_pos[0] = float(position.x)
+        self.turtle_pos[0] = -float(position.x)
         self.turtle_pos[1] = float(position.y)
-        self.turtle_angle = y
+        self.turtle_angle = -y
         self.turtle_state_is_set = True
 
     def detections_callback(self, msg):
@@ -78,7 +78,7 @@ class OccupancyNode(Node):
             if detection.z_in_meters < 0.35:
                 continue
             classID = detection.label
-            angle = np.deg2rad(detection.angle) + self.turtle_angle
+            angle = -np.deg2rad(detection.angle) + self.turtle_angle
             turtle_angle = self.turtle_angle
             distance = detection.z_in_meters
 
@@ -88,15 +88,15 @@ class OccupancyNode(Node):
             if classID == 0 and np.deg2rad(detection.angle) > 0:
                 continue
 
-            x = self.turtle_pos[0] - np.cos(angle) * detection.z_in_meters
-            y = self.turtle_pos[1] - np.sin(angle) * detection.z_in_meters
+            x = self.turtle_pos[0] + np.cos(angle) * detection.z_in_meters
+            y = self.turtle_pos[1] + np.sin(angle) * detection.z_in_meters
             self.get_logger().info(f"Detection: classID={classID}, angle={angle}, turtle_angle={turtle_angle}, distance={distance}, x={x}, y={y}")
             self.map.append((x, y, classID))
 
     def update_map(self):
         points = self.map
         self.get_logger().info(f"{len(self.map)} points")
-        dbscan = DBSCAN(eps=0.15, min_samples=2)
+        dbscan = DBSCAN(eps=0.12, min_samples=2)
         if not points:
             return
         labels = dbscan.fit_predict(points)

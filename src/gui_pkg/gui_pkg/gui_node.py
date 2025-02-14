@@ -18,9 +18,10 @@ from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 import numpy as np
 
 class GuiNode(Node):
-    hmi = None  # MainWindow
     def __init__(self):
         super().__init__('gui_node')
+        self.hmi : "MainWindow"= None  # MainWindow
+
         self.get_logger().info("Gui node has been started.")
         # Subscribe to the occupancy map and camera topics
         self.subscription_occupancymap = message_filters.Subscriber(
@@ -61,6 +62,7 @@ class GuiNode(Node):
     def occupancy_map_callback(self, msg):
         self.classedpoints = msg.classedpoints
         self.turtle = msg.turtle
+        self.hmi.update_map()
     def annotated_image_callback(self, msg):
         # Convert the ROS Image message to a QImage
         self.get_logger().info("Received annotated image")
@@ -75,7 +77,7 @@ class GuiNode(Node):
             self.get_logger().error('Failed to convert annotated image: %s' % str(e))
 
 class MainWindow(QMainWindow):
-    def __init__(self, gui_node):
+    def __init__(self, gui_node :GuiNode):
         super().__init__()
         self.setWindowTitle('Occupancy Map')
         self.setGeometry(100, 100, 600, 600)
@@ -166,7 +168,6 @@ class MainWindow(QMainWindow):
 
         self.timer = QTimer(self)
         self.timer.timeout.connect(self.update_video)
-        self.timer.timeout.connect(self.update_map)
         self.timer.start(1000)  # Update every 1000 ms (1 second)
 
     def reset_occupancy_map(self):
@@ -201,7 +202,7 @@ class MainWindow(QMainWindow):
             turtle_x = self.gui_node.turtle.x
             turtle_y = self.gui_node.turtle.y
             turtle_angle = self.gui_node.turtle.angle
-            ax.quiver(turtle_x, turtle_y, -np.cos(turtle_angle), -np.sin(turtle_angle), scale=10, color='red')
+            ax.quiver(turtle_x, turtle_y, np.cos(turtle_angle), np.sin(turtle_angle), scale=10, color='red')
         if self.gui_node.classedpoints:
             for point in self.gui_node.classedpoints:
                 x.append(point.x)
@@ -217,6 +218,8 @@ class MainWindow(QMainWindow):
         ax.scatter(x, y, c=color)
         ax.set_xlabel('X')
         ax.set_ylabel('Y')
+        #ax.set_xlim((0,15))
+        #ax.set_ylim((0,15))
         ax.set_title('Occupancy Map')
 
         # Refresh the canvas
@@ -260,12 +263,10 @@ def main(args=None):
 
     app = QApplication(sys.argv)
     hmi = MainWindow(node)
+    node.hmi = hmi
 
     executor = MultiThreadedExecutor()
     executor.add_node(node)
-
-    hmi.node = node
-    node.hmi = hmi
 
     thread = Thread(target=executor.spin)
     thread.start()
