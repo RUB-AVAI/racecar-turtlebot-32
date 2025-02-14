@@ -144,6 +144,47 @@ class MainWindow(QMainWindow):
         steering_vel_layout.addWidget(self.steering_vel_input)
         layout.addLayout(steering_vel_layout)
 
+        # X LIMIT INPUTS
+        xlim_layout = QHBoxLayout()
+        self.xlim_label = QLabel('X Limits:', self)
+        xlim_layout.addWidget(self.xlim_label)
+        self.xlim_min_input = QDoubleSpinBox(self)
+        self.xlim_min_input.setRange(-100.0, 100.0)
+        self.xlim_min_input.setDecimals(2)
+        self.xlim_min_input.setSingleStep(0.1)
+        self.xlim_min_input.setValue(-10.0)
+        xlim_layout.addWidget(self.xlim_min_input)
+        self.xlim_max_input = QDoubleSpinBox(self)
+        self.xlim_max_input.setRange(-100.0, 100.0)
+        self.xlim_max_input.setDecimals(2)
+        self.xlim_max_input.setSingleStep(0.1)
+        self.xlim_max_input.setValue(10.0)
+        xlim_layout.addWidget(self.xlim_max_input)
+        layout.addLayout(xlim_layout)
+
+        # Y LIMIT INPUTS
+        ylim_layout = QHBoxLayout()
+        self.ylim_label = QLabel('Y Limits:', self)
+        ylim_layout.addWidget(self.ylim_label)
+        self.ylim_min_input = QDoubleSpinBox(self)
+        self.ylim_min_input.setRange(-100.0, 100.0)
+        self.ylim_min_input.setDecimals(2)
+        self.ylim_min_input.setSingleStep(0.1)
+        self.ylim_min_input.setValue(-10.0)
+        ylim_layout.addWidget(self.ylim_min_input)
+        self.ylim_max_input = QDoubleSpinBox(self)
+        self.ylim_max_input.setRange(-100.0, 100.0)
+        self.ylim_max_input.setDecimals(2)
+        self.ylim_max_input.setSingleStep(0.1)
+        self.ylim_max_input.setValue(10.0)
+        ylim_layout.addWidget(self.ylim_max_input)
+        layout.addLayout(ylim_layout)
+
+        # AUTO LIMIT CHECKBOX
+        self.auto_limit_checkbox = QCheckBox('Auto Limits', self)
+        self.auto_limit_checkbox.setChecked(True)
+        layout.addWidget(self.auto_limit_checkbox)
+
         # RESET OCCUPANCY MAP BUTTON
         self.reset_button = QPushButton('Reset Occupancy Map', self)
         self.reset_button.setGeometry(10, 130, 150, 30)
@@ -220,6 +261,11 @@ class MainWindow(QMainWindow):
         ax.set_ylabel('Y')
         #ax.set_xlim((0,15))
         #ax.set_ylim((0,15))
+
+        if not self.auto_limit_checkbox.isChecked():
+            ax.set_xlim(self.xlim_min_input.value(), self.xlim_max_input.value())
+            ax.set_ylim(self.ylim_min_input.value(), self.ylim_max_input.value())
+
         ax.set_title('Occupancy Map')
 
         # Refresh the canvas
