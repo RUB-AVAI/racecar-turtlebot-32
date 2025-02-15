@@ -72,6 +72,10 @@ class OccupancyNode(Node):
             self.get_logger().info("Turtlebot state not set yet")
             return
 
+        predict_blue_cones = True
+
+        fixed_width = 1.1
+
         for detection in msg.detectionarray.detections:
             if detection.z_in_meters > 0.75:
                 continue
@@ -81,6 +85,9 @@ class OccupancyNode(Node):
             angle = -np.deg2rad(detection.angle) + self.turtle_angle
             turtle_angle = self.turtle_angle
             distance = detection.z_in_meters
+
+            if classID == 0 and predict_blue_cones:
+                continue
 
             if classID == 2 and np.deg2rad(detection.angle) < 0:
                 continue
@@ -93,10 +100,17 @@ class OccupancyNode(Node):
             self.get_logger().info(f"Detection: classID={classID}, angle={angle}, turtle_angle={turtle_angle}, distance={distance}, x={x}, y={y}")
             self.map.append((x, y, classID))
 
+            if classID == 2 and predict_blue_cones:
+                blue_angle = angle + np.pi / 2
+                blue_x = x + np.cos(blue_angle) * fixed_width
+                blue_y = y + np.sin(blue_angle) * fixed_width
+                self.get_logger().info(f"Predicted Blue Cone: angle={blue_angle}, x={blue_x}, y={blue_y}")
+                self.map.append((blue_x, blue_y, 0))
+
     def update_map(self):
         points = self.map
         self.get_logger().info(f"{len(self.map)} points")
-        dbscan = DBSCAN(eps=0.12, min_samples=2)
+        dbscan = DBSCAN(eps=0.29, min_samples=2)
         if not points:
             return
         labels = dbscan.fit_predict(points)
