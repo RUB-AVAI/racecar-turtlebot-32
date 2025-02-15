@@ -271,6 +271,7 @@ class MainWindow(QMainWindow):
                 my.append(point.y)
         ax.scatter(x, y, c=color)
         ax.scatter(mx, my, c='green')
+        ax.plot(mx, my, color='green')  # Connect all points with a line
         ax.set_xlabel('X')
         ax.set_ylabel('Y')
         #ax.set_xlim((0,15))
