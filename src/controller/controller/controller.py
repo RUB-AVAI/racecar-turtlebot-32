@@ -3,7 +3,8 @@ from rclpy.qos import qos_profile_system_default
 from ackermann_msgs.msg import AckermannDriveStamped
 from rclpy.node import Node
 from geometry_msgs.msg import Twist
-from avai_messages.msg import OccupancyMapState
+from avai_messages.msg import OccupancyMapState, ClassedPoint, TurtlebotState
+from std_msgs.msg import Bool
 import sys
 import termios
 import tty
@@ -17,8 +18,13 @@ class Controller(Node):
         self.last_target = None
         self.get_logger().info("Teleop node has been started.")
         self.publisher_ = self.create_publisher(AckermannDriveStamped, 'drive', 10)
+        self.publish_middlepoints = self.create_publisher(OccupancyMapState, '/middle_point', 10)
         self.subscriber_occupany_map = self.create_subscription(OccupancyMapState, 'occupancy_map', self.occupancy_callback, qos_profile_system_default)
-    
+        self.subscription_reset_occupancy_map = self.create_subscription(
+            Bool,
+            '/reset_occupancy_map', self.reset_middlepoints_callback, 10)
+        self.middlepoints = []
+
     def run(self):
         settings = termios.tcgetattr(sys.stdin)
         try:
@@ -30,7 +36,12 @@ class Controller(Node):
                 self.process_key(key)
         finally:
             termios.tcsetattr(sys.stdin, termios.TCSADRAIN, settings)
-    
+
+    def reset_middlepoints_callback(self, msg):
+        self.get_logger().info("Resetting middlepoints")
+        if msg.data:
+            self.middlepoints = []
+
     def occupancy_callback(self, msg):
         self.get_logger().info("Received cone data")
         points = msg.classedpoints
@@ -39,12 +50,12 @@ class Controller(Node):
         if len(points) < 2:
             self.get_logger().info("Not enough points to determine path")
             return
-        
+
         if self.target is not None:
             distance_to_last_target = self.calculate_distance(self.target, rob_pos)
             self.get_logger().info(str(self.target))
             self.get_logger().info(str(distance_to_last_target))
-            if distance_to_last_target < 0.1:
+            if distance_to_last_target < 2:
                 self.last_target = self.target
                 self.target = None
         else:
@@ -109,8 +120,26 @@ class Controller(Node):
 
             middle_point = ((min_yellow.x - min_blue.x) * 0.5 + min_blue.x,
                             (min_yellow.y - min_blue.y) * 0.5 + min_blue.y)
-            
+
             self.get_logger().info("Middle Point:" + str(middle_point))
+
+            cp = ClassedPoint()
+            cp.x = middle_point[0]
+            cp.y = middle_point[1]
+            cp.c = 3
+            self.middlepoints.append(cp)
+            points = self.middlepoints
+
+            turtleState = TurtlebotState()
+            turtleState.x = 0.0
+            turtleState.y = 0.0
+            turtleState.angle = 0.0
+
+            msg = OccupancyMapState()
+            msg.classedpoints = points
+            msg.turtle = turtleState
+            self.get_logger().info("published middlepoint")
+            self.publish_middlepoints.publish(msg)
 
             if self.target == None:
                 self.target = middle_point
@@ -131,48 +160,6 @@ class Controller(Node):
         msg.drive.speed = min(1.0, distance_to_midpoint)  # Adjust speed based on distance
         msg.drive.steering_angle = angle_to_midpoint
 
-        self.publisher_.publish(msg)
-
-    def on_press(self, key):
-        self.get_logger().info("pressed")
-        msg = AckermannDriveStamped()
-        try:
-            if key == keyboard.Key.up:
-                msg.drive.speed = 1.0
-                msg.drive.steering_angle = 0.0
-            elif key == keyboard.Key.down:
-                msg.drive.speed = 1.0
-                msg.drive.steering_angle = 0.0
-            elif key == keyboard.Key.left:
-                msg.drive.speed = 1.0
-                msg.drive.steering_angle = -0.5
-            elif key == keyboard.Key.right:
-                msg.drive.speed = 1.0
-                msg.drive.steering_angle = 0.5
-            self.publisher_.publish(msg)
-        except AttributeError:
-            pass
-    
-    def process_key(self, key):
-        if key == '\x1b[A':  # Up arrow
-            self.on_press(keyboard.Key.up)
-        elif key == '\x1b[B':  # Down arrow
-            self.on_press(keyboard.Key.down)
-        elif key == '\x1b[C':  # Right arrow
-            self.on_press(keyboard.Key.right)
-        elif key == '\x1b[D':  # Left arrow
-            self.on_press(keyboard.Key.left)
-        else:
-            return
-
-    def on_release(self, key):
-        msg = AckermannDriveStamped()
-        if key in [keyboard.Key.up, keyboard.Key.down]:
-            msg.drive.speed = 0.0
-            msg.drive.steering_angle = 0.0
-        elif key in [keyboard.Key.left, keyboard.Key.right]:
-            msg.drive.speed = 0.0
-            msg.drive.steering_angle = 0.0
         self.publisher_.publish(msg)
 
 def main(args=None):

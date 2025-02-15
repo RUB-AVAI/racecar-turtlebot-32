@@ -43,7 +43,7 @@ class GuiNode(Node):
             10)
         self.reset_occupancy_map = self.create_publisher(
             Bool, '/reset_occupancy_map', qos_profile_system_default)
-        
+
         self.subscription_occupancymap.registerCallback(self.occupancy_map_callback)
         self.subscription_middlepoint.registerCallback(self.middlepoint_callback)
         # self.subscription_odom.registerCallback(self.callback_test)
@@ -51,6 +51,7 @@ class GuiNode(Node):
         self.image = None
         self.classedpoints = None
         self.turtle = None
+        self.middlepoints = []
     # def callback_test(self, msg):
         # self.get_logger().info('Received odometry data')
         # # Process the odometry data here
@@ -64,6 +65,7 @@ class GuiNode(Node):
         # self.get_logger().info(f"Linear Velocity: x={linear_velocity.x}, y={linear_velocity.y}, z={linear_velocity.z}")
         # self.get_logger().info(f"Angular Velocity: x={angular_velocity.x}, y={angular_velocity.y}, z={angular_velocity.z}")
     def middlepoint_callback(self, msg):
+        self.get_logger().info('Received middle points')
         self.middlepoints = msg.classedpoints
         self.hmi.update_map()
     def occupancy_map_callback(self, msg):
@@ -72,7 +74,6 @@ class GuiNode(Node):
         self.hmi.update_map()
     def annotated_image_callback(self, msg):
         # Convert the ROS Image message to a QImage
-        self.get_logger().info("Received annotated image")
         try:
             height = msg.height
             width = msg.width
@@ -265,8 +266,8 @@ class MainWindow(QMainWindow):
                     color.append('yellow')
                 else:
                     color.append('green')
-        if self.middlepoints:
-            for point in self.middlepoints:
+        if self.gui_node.middlepoints:
+            for point in self.gui_node.middlepoints:
                 mx.append(point.x)
                 my.append(point.y)
         ax.scatter(x, y, c=color)
