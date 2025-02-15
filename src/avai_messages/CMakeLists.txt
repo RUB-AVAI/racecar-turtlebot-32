@@ -12,6 +12,7 @@ find_package(rosidl_default_generators REQUIRED)
 
 rosidl_generate_interfaces(${PROJECT_NAME}
   "msg/Point.msg"
+  "msg/Polygon.msg"
   "msg/ClassedPoint.msg"
   "msg/TurtlebotState.msg"
   "msg/OccupancyMapState.msg"

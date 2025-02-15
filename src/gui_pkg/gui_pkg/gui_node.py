@@ -9,7 +9,7 @@ from PyQt5.QtCore import QTimer, Qt
 from threading import Thread
 from rclpy.executors import MultiThreadedExecutor
 from ackermann_msgs.msg import AckermannDriveStamped
-from avai_messages.msg import OccupancyMapState
+from avai_messages.msg import OccupancyMapState, Polygon
 from std_msgs.msg import Bool
 from sensor_msgs.msg import Image
 import message_filters
@@ -30,7 +30,7 @@ class GuiNode(Node):
             '/occupancy_map')
         self.subscription_middlepoint = message_filters.Subscriber( # contains middle points of yellow and blue cone
             self,
-            OccupancyMapState,
+            Polygon,
             '/middle_point')
         self.subscription_odom = message_filters.Subscriber(
             self,
@@ -66,7 +66,7 @@ class GuiNode(Node):
         # self.get_logger().info(f"Angular Velocity: x={angular_velocity.x}, y={angular_velocity.y}, z={angular_velocity.z}")
     def middlepoint_callback(self, msg):
         self.get_logger().info('Received middle points')
-        self.middlepoints = msg.classedpoints
+        self.middlepoints = msg.points
         self.hmi.update_map()
     def occupancy_map_callback(self, msg):
         self.classedpoints = msg.classedpoints

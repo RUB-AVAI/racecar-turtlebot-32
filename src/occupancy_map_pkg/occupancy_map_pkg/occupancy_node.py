@@ -2,7 +2,7 @@ import rclpy
 from rclpy.node import Node
 from nav_msgs.msg import Odometry
 from .tf_transform import euler_from_quaternion
-import sys
+from rclpy.qos import qos_profile_system_default
 import numpy as np
 from avai_messages.msg import DetectionArrayStamped, OccupancyMapState, ClassedPoint, TurtlebotState
 from std_msgs.msg import Bool
@@ -20,14 +20,14 @@ class OccupancyNode(Node):
             self,
             DetectionArrayStamped,
             '/detections')
-        self.subscription_reset_occupancy_map = message_filters.Subscriber(
-            self,
-            Bool,
-            '/reset_occupancy_map')
-        self.publisher_occupancymap = self.create_publisher(OccupancyMapState, "occupancy_map", 10)
         self.cone_sync = message_filters.ApproximateTimeSynchronizer([self.subscription_odom, self.subscription_detections], 1000, .2)
         self.cone_sync.registerCallback(self.callback_synchronised)
-        self.subscription_reset_occupancy_map.registerCallback(self.callback_reset_occupancy_map)
+        
+        self.publisher_occupancymap = self.create_publisher(OccupancyMapState, "occupancy_map", 10)
+        
+        self.subscription_reset_occupancy_map = self.create_subscription(
+            Bool,
+            '/reset_occupancy_map', self.callback_reset_occupancy_map, qos_profile_system_default)
 
         #map is a list of points (x,y,classID)
         self.map = []

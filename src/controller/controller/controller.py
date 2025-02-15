@@ -3,7 +3,7 @@ from rclpy.qos import qos_profile_system_default
 from ackermann_msgs.msg import AckermannDriveStamped
 from rclpy.node import Node
 from geometry_msgs.msg import Twist
-from avai_messages.msg import OccupancyMapState, ClassedPoint, TurtlebotState
+from avai_messages.msg import OccupancyMapState, ClassedPoint, TurtlebotState, Polygon
 from std_msgs.msg import Bool
 import sys
 import termios
@@ -19,7 +19,7 @@ class Controller(Node):
         self.last_target = None
         self.get_logger().info("Teleop node has been started.")
         self.publisher_ = self.create_publisher(AckermannDriveStamped, 'drive', 10)
-        self.publish_middlepoints = self.create_publisher(OccupancyMapState, '/middle_point', 10)
+        self.publish_middlepoints = self.create_publisher(Polygon, '/middle_point', 10)
         self.subscriber_occupany_map = self.create_subscription(OccupancyMapState, 'occupancy_map', self.occupancy_callback, qos_profile_system_default)
         self.subscription_reset_occupancy_map = self.create_subscription(
             Bool,
