@@ -2,8 +2,7 @@ import rclpy
 from rclpy.qos import qos_profile_system_default
 from ackermann_msgs.msg import AckermannDriveStamped
 from rclpy.node import Node
-from geometry_msgs.msg import Twist
-from avai_messages.msg import OccupancyMapState, ClassedPoint, TurtlebotState, Polygon
+from avai_messages.msg import OccupancyMapState,  Polygon, Point
 from std_msgs.msg import Bool
 import sys
 import termios
@@ -42,14 +41,9 @@ class Controller(Node):
         self.get_logger().info("Resetting middlepoints")
         if msg.data:
             self.middlepoints = []
-            turtleState = TurtlebotState()
-            turtleState.x = 0.0
-            turtleState.y = 0.0
-            turtleState.angle = 0.0
 
-            msg = OccupancyMapState()
-            msg.classedpoints = []
-            msg.turtle = turtleState
+            msg = Polygon()
+            msg.points = []
             self.publish_middlepoints.publish(msg)
 
     def occupancy_callback(self, msg):
@@ -133,21 +127,14 @@ class Controller(Node):
 
             self.get_logger().info("Middle Point:" + str(middle_point))
 
-            cp = ClassedPoint()
-            cp.x = middle_point[0]
-            cp.y = middle_point[1]
-            cp.c = 3
-            self.middlepoints.append(cp)
+            point = Point()
+            point.x = middle_point[0]
+            point.y = middle_point[1]
+            self.middlepoints.append(point)
             points = self.middlepoints
 
-            turtleState = TurtlebotState()
-            turtleState.x = 0.0
-            turtleState.y = 0.0
-            turtleState.angle = 0.0
-
-            msg = OccupancyMapState()
-            msg.classedpoints = points
-            msg.turtle = turtleState
+            msg = Polygon()
+            msg.points = points
             self.get_logger().info("published middlepoint")
             self.publish_middlepoints.publish(msg)
 
