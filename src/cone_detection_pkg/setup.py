@@ -11,6 +11,8 @@ setup(
             ['resource/' + package_name]),
         ('share/' + package_name, ['package.xml']),
         ("lib/python3.10/site-packages/"+package_name+"/ml_model", [package_name+"/ml_model/best.pt"]),
+        ("lib/python3.10/site-packages/"+package_name+"/ml_model", [package_name+"/ml_model/best_l.pt"]),
+        ("lib/python3.10/site-packages/"+package_name+"/ml_model", [package_name+"/ml_model/best_m.pt"]),
     ],
     install_requires=['setuptools'],
     zip_safe=True,

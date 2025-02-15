@@ -41,6 +41,15 @@ class Controller(Node):
         self.get_logger().info("Resetting middlepoints")
         if msg.data:
             self.middlepoints = []
+            turtleState = TurtlebotState()
+            turtleState.x = 0.0
+            turtleState.y = 0.0
+            turtleState.angle = 0.0
+
+            msg = OccupancyMapState()
+            msg.classedpoints = []
+            msg.turtle = turtleState
+            self.publish_middlepoints.publish(msg)
 
     def occupancy_callback(self, msg):
         self.get_logger().info("Received cone data")
