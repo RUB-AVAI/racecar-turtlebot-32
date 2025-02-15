@@ -10,6 +10,7 @@ import termios
 import tty
 from math import atan2, copysign, radians, cos, sin, sqrt
 import math
+import numpy as np
 
 class Controller(Node):
     def __init__(self):
@@ -90,7 +91,7 @@ class Controller(Node):
         blue = []
         # use a 90 degree vector to decide if a point is in front of the bot or not
         # vector goes from bot position to a point (x2,y2) in the direction of the vector
-        vect_angle = radians(rob_pos.angle + 90)
+        vect_angle = rob_pos.angle + np.pi / 2
 
         line_distance = 0.05
         x1 = cos(rob_pos.angle) * line_distance*line_step + rob_pos.x
