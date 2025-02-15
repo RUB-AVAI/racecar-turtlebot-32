@@ -64,6 +64,7 @@ class ConeDetectionNode(Node):
             confidences = result.boxes.conf.cpu().numpy()
             labels = result.boxes.cls.cpu().numpy()
 
+
             for box, conf, label in zip(boxes, confidences, labels):
                 x1, y1, x2, y2 = box
 
@@ -166,7 +167,7 @@ class ConeDetectionNode(Node):
 
     def get_angle(self, x_center):
         CAMERA_RGB_FOV = 69  # degrees
-        CAMERA_RGB_PIXEL_WIDTH = 840  # pixels
+        CAMERA_RGB_PIXEL_WIDTH = 1280  # pixels
         angle = (x_center - (CAMERA_RGB_PIXEL_WIDTH / 2)) * (CAMERA_RGB_FOV / CAMERA_RGB_PIXEL_WIDTH)
         return angle
 

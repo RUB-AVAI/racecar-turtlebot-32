@@ -110,7 +110,7 @@ class OccupancyNode(Node):
     def update_map(self):
         points = self.map
         self.get_logger().info(f"{len(self.map)} points")
-        dbscan = DBSCAN(eps=0.29, min_samples=2)
+        dbscan = DBSCAN(eps=0.22, min_samples=2)
         if not points:
             return
         labels = dbscan.fit_predict(points)
