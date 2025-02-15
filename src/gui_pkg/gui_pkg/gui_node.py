@@ -28,6 +28,10 @@ class GuiNode(Node):
             self,
             OccupancyMapState,
             '/occupancy_map')
+        self.subscription_middlepoint = message_filters.Subscriber( # contains middle points of yellow and blue cone
+            self,
+            OccupancyMapState,
+            '/middle_point')
         self.subscription_odom = message_filters.Subscriber(
             self,
             Odometry,
@@ -39,8 +43,9 @@ class GuiNode(Node):
             10)
         self.reset_occupancy_map = self.create_publisher(
             Bool, '/reset_occupancy_map', qos_profile_system_default)
-
+        
         self.subscription_occupancymap.registerCallback(self.occupancy_map_callback)
+        self.subscription_middlepoint.registerCallback(self.middlepoint_callback)
         # self.subscription_odom.registerCallback(self.callback_test)
         self.publisher_ = self.create_publisher(AckermannDriveStamped, 'drive', 10)
         self.image = None
@@ -58,7 +63,9 @@ class GuiNode(Node):
         # self.get_logger().info(f"Orientation: x={orientation.x}, y={orientation.y}, z={orientation.z}, w={orientation.w}")
         # self.get_logger().info(f"Linear Velocity: x={linear_velocity.x}, y={linear_velocity.y}, z={linear_velocity.z}")
         # self.get_logger().info(f"Angular Velocity: x={angular_velocity.x}, y={angular_velocity.y}, z={angular_velocity.z}")
-
+    def middlepoint_callback(self, msg):
+        self.middlepoints = msg.classedpoints
+        self.hmi.update_map()
     def occupancy_map_callback(self, msg):
         self.classedpoints = msg.classedpoints
         self.turtle = msg.turtle
@@ -233,6 +240,8 @@ class MainWindow(QMainWindow):
         ax = self.figure.add_subplot(111)
         x = []
         y = []
+        mx = []
+        my = []
         color = []
         if self.gui_node.turtle:
             # Visualize the turtle's position as a blue dot
@@ -256,7 +265,13 @@ class MainWindow(QMainWindow):
                     color.append('yellow')
                 else:
                     color.append('green')
+        if self.middlepoints:
+            for point in self.middlepoints:
+                mx.append(point.x)
+                my.append(point.y)
         ax.scatter(x, y, c=color)
+        ax.scatter(mx, my, c='green')
+        ax.plot(mx, my, color='green')  # Connect all points with a line
         ax.set_xlabel('X')
         ax.set_ylabel('Y')
         #ax.set_xlim((0,15))
