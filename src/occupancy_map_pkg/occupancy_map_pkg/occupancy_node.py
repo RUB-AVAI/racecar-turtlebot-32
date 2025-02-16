@@ -22,15 +22,16 @@ class OccupancyNode(Node):
             '/detections')
         self.cone_sync = message_filters.ApproximateTimeSynchronizer([self.subscription_odom, self.subscription_detections], 1000, .2)
         self.cone_sync.registerCallback(self.callback_synchronised)
-        
+
         self.publisher_occupancymap = self.create_publisher(OccupancyMapState, "occupancy_map", 10)
-        
+
         self.subscription_reset_occupancy_map = self.create_subscription(
             Bool,
             '/reset_occupancy_map', self.callback_reset_occupancy_map, qos_profile_system_default)
 
-        #map is a list of points (x,y,classID)
+        # map is a list of points (x, y, classID)
         self.map = []
+        self.max_points = 10
 
         self.turtle_pos = [float(0), float(0)]
         self.turtle_angle = float(0)
@@ -106,6 +107,9 @@ class OccupancyNode(Node):
                 blue_y = y + np.sin(blue_angle) * fixed_width
                 self.get_logger().info(f"Predicted Blue Cone: angle={blue_angle}, x={blue_x}, y={blue_y}")
                 self.map.append((blue_x, blue_y, 0))
+
+            if len(self.map) > self.max_points:
+                self.map = self.map[-self.max_points:]
 
     def update_map(self):
         points = self.map
