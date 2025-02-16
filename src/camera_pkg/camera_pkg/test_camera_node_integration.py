@@ -18,7 +18,6 @@ def node():
 
 def test_subscription_and_publication(node):
     # Create a test ROS environment
-    rclpy.init()
     test_node = Node("test_node")
 
     # Subscribe to the processed color and depth topics
@@ -27,7 +26,7 @@ def test_subscription_and_publication(node):
 
     # Publish a sample color and depth message to the input topics
     color_msg = Image()
-    color_msg.header.stamp = rclpy.Time().to_msg()
+    color_msg.header.stamp = rclpy.time().to_msg()
     color_msg.height = 480
     color_msg.width = 640
     color_msg.encoding = "bgr8"
@@ -35,7 +34,7 @@ def test_subscription_and_publication(node):
     node.color_sub.publisher.publish(color_msg)
 
     depth_msg = Image()
-    depth_msg.header.stamp = rclpy.Time().to_msg()
+    depth_msg.header.stamp = rclpy.time().to_msg()
     depth_msg.height = 480
     depth_msg.width = 640
     depth_msg.encoding = "16UC1"

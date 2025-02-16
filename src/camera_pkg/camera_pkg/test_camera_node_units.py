@@ -18,7 +18,7 @@ def node():
 def test_color_callback(node):
     # Create a sample color image message
     color_msg = Image()
-    color_msg.header.stamp = rclpy.Time().to_msg()
+    color_msg.header.stamp = rclpy.time().to_msg()
     color_msg.height = 480
     color_msg.width = 640
     color_msg.encoding = "bgr8"
@@ -34,7 +34,7 @@ def test_color_callback(node):
 def test_depth_callback(node):
     # Create a sample depth image message
     depth_msg = Image()
-    depth_msg.header.stamp = rclpy.Time().to_msg()
+    depth_msg.header.stamp = rclpy.time().to_msg()
     depth_msg.height = 480
     depth_msg.width = 640
     depth_msg.encoding = "16UC1"
@@ -50,7 +50,7 @@ def test_depth_callback(node):
 def test_image_conversion(node):
     # Test image conversion from ROS message to OpenCV and back
     color_msg = Image()
-    color_msg.header.stamp = rclpy.Time().to_msg()
+    color_msg.header.stamp = rclpy.time().to_msg()
     color_msg.height = 480
     color_msg.width = 640
     color_msg.encoding = "bgr8"
