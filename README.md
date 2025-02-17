@@ -52,3 +52,5 @@ source install/setup.bash
 ```
 ros2 run package_name node_name
 ```
+# Launch file
+ros2 launch gui_pkg launch.py
