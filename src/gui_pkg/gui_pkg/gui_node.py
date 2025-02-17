@@ -79,7 +79,7 @@ class GuiNode(Node):
             width = msg.width
             channels = 3  # Assuming BGR8 encoding
             bytes_per_line = channels * width
-            q_image = QImage(msg.data, width, height, bytes_per_line, QImage.Format_BGR888)
+            q_image = QImage(msg.data, width, height, bytes_per_line, QImage.Format_RGB888)
             self.hmi.update_image(q_image)
         except Exception as e:
             self.get_logger().error('Failed to convert annotated image: %s' % str(e))
