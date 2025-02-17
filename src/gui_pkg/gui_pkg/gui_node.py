@@ -79,7 +79,7 @@ class GuiNode(Node):
             width = msg.width
             channels = 3  # Assuming BGR8 encoding
             bytes_per_line = channels * width
-            q_image = QImage(msg.data, width, height, bytes_per_line, QImage.Format_RGB888)
+            q_image = QImage(msg.data, width, height, bytes_per_line, QImage.Format_BGR888)
             self.hmi.update_image(q_image)
         except Exception as e:
             self.get_logger().error('Failed to convert annotated image: %s' % str(e))
@@ -259,11 +259,11 @@ class MainWindow(QMainWindow):
                 x.append(point.x)
                 y.append(point.y)
                 if point.c == 0:
-                    color.append('blue')
+                    color.append('yellow')
                 elif point.c == 1:
                     color.append('orange')
                 elif point.c == 2:
-                    color.append('yellow')
+                    color.append('blue')
                 else:
                     color.append('green')
         if self.gui_node.middlepoints:
