@@ -42,9 +42,14 @@ colcon build
 
 source install/setup.bash
 
-# Use the following script to update Files faster by directly copying them to sitepackages (20s colcon build vs 0.5s copy)
-# To use it you have to have ran "colcon build" at least once.
-# make sure file endings are LF
+colcon build --packages-select ackermann_msgs realsense2_camera_msgs vesc_msgs`urg_node_msgs
+```
+# Copy files script
+
+Use the following script to update Files faster by directly copying them to sitepackages (20s colcon build vs 0.5s copy)
+To use it you have to have ran "colcon build" at least once.
+make sure file endings are LF
+```
 ./copyFilesToSitepackages.bash
 ```
 
