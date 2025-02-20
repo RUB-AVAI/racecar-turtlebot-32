@@ -1,7 +1,7 @@
 import rclpy
 from sensor_msgs.msg import LaserScan
 from rclpy.node import Node
-from avai_messages.msg import Detection, DetectionArray
+from avai_messages.msg import Detection, DetectionArray, DetectionArrayStamped
 from rclpy.qos import qos_profile_sensor_data
 import message_filters
 
@@ -46,6 +46,7 @@ def cluster(scan: LaserScan):
 
 class LidarFusion(Node):
     def __init__(self):
+        
         super().__init__("lidar_fusion")
         self.lidar_scan = None
 
@@ -53,15 +54,14 @@ class LidarFusion(Node):
         self.lidar_sub = message_filters.Subscriber(self, LaserScan, "scan", qos_profile=qos_profile_sensor_data)
 
         # Subscriber for the YOLO-based detections.
-        self.detection_sub = message_filters.Subscriber(self, DetectionArray, "detections", qos_profile=qos_profile_sensor_data)
+        self.detection_sub = message_filters.Subscriber( self, DetectionArrayStamped, '/detections')
 
         # Synchronize the two topics.
         self.ts = message_filters.ApproximateTimeSynchronizer(
             [self.lidar_sub, self.detection_sub], queue_size=50, slop=0.1, allow_headerless=False)
 
-
         # Publisher for fused detections.
-        self.publisher_lidar = self.create_publisher(DetectionArray, "fused_detections", 10)
+        self.publisher_lidar = self.create_publisher(DetectionArrayStamped, "fused_detections", 10)
         self.get_logger().info("Lidar Fusion Node started (with YOLO detections).")
         self.ts.registerCallback(self.fusion_callback)
 
@@ -89,7 +89,7 @@ class LidarFusion(Node):
         self.get_logger().info(f"Fused detections: {fused}")
 
         # Build a DetectionArray message with the fused information.
-        fused_msg = DetectionArray()
+        fused_msg = DetectionArrayStamped()
         fused_msg.header = detection_msg.header  # Use the detection header timestamp.
         for fused_item in fused:
             cluster_center, lidar_dist, label = fused_item
