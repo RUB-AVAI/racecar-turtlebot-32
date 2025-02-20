@@ -153,9 +153,10 @@ class Controller(Node):
         msg = AckermannDriveStamped()
         angle_to_midpoint = math.atan2(midpoint[1] - rob_pos.y, midpoint[0] - rob_pos.x)
         distance_to_midpoint = self.calculate_distance(midpoint, rob_pos)
-
+        self.get_logger().info("published middlepoint")
         msg.drive.speed = min(1.0, distance_to_midpoint)  # Adjust speed based on distance
         msg.drive.steering_angle = angle_to_midpoint
+        self.get_logger().info(f"Driving to midpoint: {midpoint}, speed: {msg.drive.speed}, angle: {msg.drive.steering_angle}")
 
         self.publisher_.publish(msg)
 

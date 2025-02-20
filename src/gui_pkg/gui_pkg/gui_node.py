@@ -11,6 +11,7 @@ from rclpy.executors import MultiThreadedExecutor
 from ackermann_msgs.msg import AckermannDriveStamped
 from avai_messages.msg import OccupancyMapState, Polygon
 from std_msgs.msg import Bool
+from std_msgs.msg import Float32
 from sensor_msgs.msg import Image
 import message_filters
 import matplotlib.pyplot as plt
@@ -44,6 +45,9 @@ class GuiNode(Node):
         self.reset_occupancy_map = self.create_publisher(
             Bool, '/reset_occupancy_map', qos_profile_system_default)
 
+        self.publisher_middlepoint_width = self.create_publisher(
+            Float32, '/middlepoint_width', qos_profile_system_default)
+        
         self.subscription_occupancymap.registerCallback(self.occupancy_map_callback)
         self.subscription_middlepoint.registerCallback(self.middlepoint_callback)
         # self.subscription_odom.registerCallback(self.callback_test)
@@ -193,6 +197,19 @@ class MainWindow(QMainWindow):
         self.auto_limit_checkbox.setChecked(True)
         layout.addWidget(self.auto_limit_checkbox)
 
+        # MIDDLEPOINT_WIDTH INPUT
+        float_layout = QHBoxLayout()
+        self.float_label = QLabel('Enter middlepoint_width value:', self)
+        float_layout.addWidget(self.float_label)
+        self.float_input = QDoubleSpinBox(self)
+        self.float_input.setRange(-100.0, 100.0)
+        self.float_input.setDecimals(2)
+        self.float_input.setSingleStep(0.1)
+        self.float_input.setValue(0.1)
+        self.float_input.valueChanged.connect(self.publish_float)  # Connect valueChanged signal to publish_float method
+        float_layout.addWidget(self.float_input)
+        layout.addLayout(float_layout)
+
         # RESET OCCUPANCY MAP BUTTON
         self.reset_button = QPushButton('Reset Occupancy Map', self)
         self.reset_button.setGeometry(10, 130, 150, 30)
@@ -224,6 +241,13 @@ class MainWindow(QMainWindow):
         msg = Bool()
         msg.data = True
         self.gui_node.reset_occupancy_map.publish(msg)
+
+    def publish_float(self):
+        self.gui_node.get_logger().info("Publishing float value")
+        msg = Float32()
+        msg.data = self.float_input.value()
+        self.gui_node.publisher_middlepoint_width.publish(msg)
+
 
     def update_image(self, q_image):
         self.video_label.setPixmap(QPixmap.fromImage(q_image))

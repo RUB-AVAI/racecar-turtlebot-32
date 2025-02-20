@@ -6,6 +6,7 @@ from rclpy.qos import qos_profile_system_default
 import numpy as np
 from avai_messages.msg import DetectionArrayStamped, OccupancyMapState, ClassedPoint, TurtlebotState
 from std_msgs.msg import Bool
+from std_msgs.msg import Float32
 import message_filters
 from sklearn.cluster import DBSCAN
 
@@ -20,8 +21,13 @@ class OccupancyNode(Node):
             self,
             DetectionArrayStamped,
             '/detections')
+        self.subscription_middlepoint_width = message_filters.Subscriber(
+            self,
+            Float32,
+            '/middlepoint_width')
         self.cone_sync = message_filters.ApproximateTimeSynchronizer([self.subscription_odom, self.subscription_detections], 1000, .2)
         self.cone_sync.registerCallback(self.callback_synchronised)
+        self.subscription_middlepoint_width.registerCallback(self.callback_middlepoint_width)
 
         self.publisher_occupancymap = self.create_publisher(OccupancyMapState, "occupancy_map", 10)
 
@@ -32,13 +38,17 @@ class OccupancyNode(Node):
         # map is a list of points (x, y, classID)
         self.map = []
         self.max_points = 10
-
+        self.middlepoint_width = None
         self.turtle_pos = [float(0), float(0)]
         self.turtle_angle = float(0)
         self.turtle_state_is_set = False
 
         self.get_logger().info("Occupancy Node has been started.")
 
+    def callback_middlepoint_width(self, msg):
+        self.get_logger().info(f"Middlepoint width: {msg.data}")
+        self.middlepoint_width = msg.data
+        
     def callback_synchronised(self, odom, detections):
         self.odom_callback(odom)
         self.detections_callback(detections)
@@ -75,7 +85,7 @@ class OccupancyNode(Node):
 
         predict_blue_cones = True
 
-        fixed_width = 0.35
+        fixed_width = 0.1
 
         for detection in msg.detectionarray.detections:
             if detection.z_in_meters > 0.75:
