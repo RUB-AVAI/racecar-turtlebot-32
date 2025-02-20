@@ -151,7 +151,7 @@ class ConeDetectionNode(Node):
 
         # Convert RGB image back to BGR for saving
         save_image = color_image_rgb#cv2.cvtColor(color_image_rgb, cv2.COLOR_RGB2BGR)
-
+        save_image = cv2.resize(save_image, (640, 480))
         # Convert the annotated image to a ROS Image message
         annotated_image_msg = self.bridge.cv2_to_imgmsg(save_image, encoding='rgb8')
         annotated_image_msg.header = color_msg.header
