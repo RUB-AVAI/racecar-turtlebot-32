@@ -44,7 +44,8 @@ class GuiNode(Node):
             10)
         self.reset_occupancy_map = self.create_publisher(
             Bool, '/reset_occupancy_map', qos_profile_system_default)
-
+        self.toggle_autodrive = self.create_publisher(
+            Bool, '/toggle_autdrive', qos_profile_system_default)
         self.publisher_middlepoint_width = self.create_publisher(
             Float32, '/middlepoint_width', qos_profile_system_default)
         
@@ -91,6 +92,7 @@ class GuiNode(Node):
 class MainWindow(QMainWindow):
     def __init__(self, gui_node :GuiNode):
         super().__init__()
+        self.keyslist = set()
         self.setWindowTitle('Occupancy Map')
         self.setGeometry(100, 100, 600, 600)
         self.gui_node = gui_node # for receiving and publishing messages (occupancymap and drive)
@@ -197,24 +199,17 @@ class MainWindow(QMainWindow):
         self.auto_limit_checkbox.setChecked(True)
         layout.addWidget(self.auto_limit_checkbox)
 
-        # MIDDLEPOINT_WIDTH INPUT
-        float_layout = QHBoxLayout()
-        self.float_label = QLabel('Enter middlepoint_width value:', self)
-        float_layout.addWidget(self.float_label)
-        self.float_input = QDoubleSpinBox(self)
-        self.float_input.setRange(-100.0, 100.0)
-        self.float_input.setDecimals(2)
-        self.float_input.setSingleStep(0.1)
-        self.float_input.setValue(0.1)
-        self.float_input.valueChanged.connect(self.publish_float)  # Connect valueChanged signal to publish_float method
-        float_layout.addWidget(self.float_input)
-        layout.addLayout(float_layout)
-
         # RESET OCCUPANCY MAP BUTTON
         self.reset_button = QPushButton('Reset Occupancy Map', self)
         self.reset_button.setGeometry(10, 130, 150, 30)
         self.reset_button.clicked.connect(self.reset_occupancy_map)
         layout.addWidget(self.reset_button)
+
+        # TOGGLE AUTODRIVE BUTTON
+        self.autodrive_checkbox = QCheckBox('Auto drive', self)
+        self.autodrive_checkbox.setChecked(True)
+        self.autodrive_checkbox.stateChanged.connect(self.publish_autodrive)
+        layout.addWidget(self.autodrive_checkbox)
 
         occupancymap_layout = QHBoxLayout()
         # Create a Matplotlib figure and canvas
@@ -248,6 +243,11 @@ class MainWindow(QMainWindow):
         msg.data = self.float_input.value()
         self.gui_node.publisher_middlepoint_width.publish(msg)
 
+    def publish_autodrive(self):
+        self.gui_node.get_logger().info("Publishing autodrive state")
+        msg = Bool()
+        msg.data = self.autodrive_checkbox.isChecked()
+        self.gui_node.toggle_autodrive.publish(msg)
 
     def update_image(self, q_image):
         self.video_label.setPixmap(QPixmap.fromImage(q_image))
@@ -314,33 +314,37 @@ class MainWindow(QMainWindow):
         if not self.checkbox.isChecked() or event.key() not in [Qt.Key_W, Qt.Key_S, Qt.Key_A, Qt.Key_D]:
             print("nothing")
             return  # Do nothing if the checkbox is not checked
+        self.keyslist.add(event.key())
 
         msg = AckermannDriveStamped()
         speed_value = self.speed_input.value()  # Get the entered speed value
         steering_value = self.steering_input.value()  # Get the entered steering angle value
         steering_velocity_value = self.steering_vel_input.value()  # Get the entered steering angle velocity value
-        if event.key() == Qt.Key_W:
+        if Qt.Key_W in self.keyslist:
             msg.drive.speed = speed_value
             msg.drive.steering_angle = 0.0
             msg.drive.steering_angle_velocity = 0.0
             print("W key pressed")
-        elif event.key() == Qt.Key_S:
+        elif Qt.Key_S in self.keyslist:
             msg.drive.speed = -speed_value
             msg.drive.steering_angle = 0.0
             msg.drive.steering_angle_velocity = 0.0
             print("S key pressed")
-        elif event.key() == Qt.Key_A:
-            msg.drive.speed = 0.0
+        if Qt.Key_A in self.keyslist:
+            #msg.drive.speed = 0.0
             msg.drive.steering_angle = steering_value
             msg.drive.steering_angle_velocity = steering_velocity_value
             print("A key pressed")
-        elif event.key() == Qt.Key_D:
-            msg.drive.speed = 0.0
+        elif Qt.Key_D in self.keyslist:
+            #msg.drive.speed = 0.0
             msg.drive.steering_angle = -steering_value
             msg.drive.steering_angle_velocity = steering_velocity_value
             print("D key pressed")
 
         self.gui_node.publisher_.publish(msg)
+    def keyReleaseEvent(self, event):
+        if event.key() in self.keyslist:
+            self.keyslist.remove(event.key())
 
 def main(args=None):
     rclpy.init(args=args)

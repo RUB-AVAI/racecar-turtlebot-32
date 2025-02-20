@@ -23,7 +23,11 @@ class Controller(Node):
         self.subscription_reset_occupancy_map = self.create_subscription(
             Bool,
             '/reset_occupancy_map', self.reset_middlepoints_callback, 10)
+        self.subscription_toggle_autodrive = self.create_subscription(
+            Bool,
+            '/toggle_autodrive', self.drive_reset_steering, 10)
         self.middlepoints = []
+        self.toggle_autodrive = True
 
     def run(self):
         settings = termios.tcgetattr(sys.stdin)
@@ -46,7 +50,13 @@ class Controller(Node):
             msg.points = []
             self.publish_middlepoints.publish(msg)
 
+    def drive_reset_steering(self, msg):
+        self.toggle_autodrive = msg.data
+        self.get_logger().info(f"Autodrive: {self.toggle_autodrive}")
+
     def occupancy_callback(self, msg):
+        if self.subscription_toggle_autodrive:
+            return
         self.get_logger().info("Received cone data")
         points = msg.classedpoints
         rob_pos = msg.turtle
@@ -158,7 +168,8 @@ class Controller(Node):
         msg.drive.steering_angle = angle_to_midpoint
         self.get_logger().info(f"Driving to midpoint: {midpoint}, speed: {msg.drive.speed}, angle: {msg.drive.steering_angle}")
 
-        self.publisher_.publish(msg)
+        self.publisher_.publish(self)
+
 
 def main(args=None):
     rclpy.init(args=args)
