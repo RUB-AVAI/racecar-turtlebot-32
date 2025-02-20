@@ -2,6 +2,7 @@ import rclpy
 import time
 from rclpy.node import Node
 from sensor_msgs.msg import Image
+from std_msgs.msg import Bool
 from cv_bridge import CvBridge
 import cv2
 import matplotlib.pyplot as plt
@@ -28,6 +29,10 @@ class ConeDetectionNode(Node):
         self.max_width = 200
         self.max_height = 200
 
+        self.subscription_toggle_camera = self.create_subscription(
+            Bool,
+            '/toggle_camera', self.toggle_camera_callback, 10)
+        self.toggle_camera = True
 
         # Publisher
         self.publisher_detections = self.create_publisher(DetectionArrayStamped, "detections", 10)
@@ -39,6 +44,10 @@ class ConeDetectionNode(Node):
         self.ts.registerCallback(self.image_callback)
 
         self.get_logger().info("Cone Detection Node has been started.")
+
+    def toggle_camera_callback(self, msg):
+        self.get_logger().info(f"Toggle camera: {msg.data}")
+        self.toggle_camera = msg.data
 
     def image_callback(self, color_msg, depth_msg):
         try:
@@ -155,7 +164,8 @@ class ConeDetectionNode(Node):
         # Convert the annotated image to a ROS Image message
         annotated_image_msg = self.bridge.cv2_to_imgmsg(save_image, encoding='rgb8')
         annotated_image_msg.header = color_msg.header
-        self.publisher_detections_images.publish(annotated_image_msg)
+        if self.toggle_camera:
+            self.publisher_detections_images.publish(annotated_image_msg)
 
         # Save the annotated image
         timestamp = color_msg.header.stamp.sec  # Use ROS message timestamp

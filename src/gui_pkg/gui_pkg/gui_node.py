@@ -46,6 +46,8 @@ class GuiNode(Node):
             Bool, '/reset_occupancy_map', qos_profile_system_default)
         self.toggle_autodrive = self.create_publisher(
             Bool, '/toggle_autdrive', qos_profile_system_default)
+        self.toggle_camera = self.create_publisher(
+            Bool, '/toggle_camera', qos_profile_system_default)
         self.publisher_middlepoint_width = self.create_publisher(
             Float32, '/middlepoint_width', qos_profile_system_default)
         
@@ -211,6 +213,12 @@ class MainWindow(QMainWindow):
         self.autodrive_checkbox.stateChanged.connect(self.publish_autodrive)
         layout.addWidget(self.autodrive_checkbox)
 
+        # TOGGLE CAMERA BUTTON
+        self.camera_checkbox = QCheckBox('Camera', self)
+        self.camera_checkbox.setChecked(True)
+        self.camera_checkbox.stateChanged.connect(self.publish_toggle_camera)
+        layout.addWidget(self.camera_checkbox)
+
         occupancymap_layout = QHBoxLayout()
         # Create a Matplotlib figure and canvas
         self.figure = plt.figure()
@@ -248,6 +256,12 @@ class MainWindow(QMainWindow):
         msg = Bool()
         msg.data = self.autodrive_checkbox.isChecked()
         self.gui_node.toggle_autodrive.publish(msg)
+
+    def publish_toggle_camera(self):
+        self.gui_node.get_logger().info("Publishing camera state")
+        msg = Bool()
+        msg.data = self.camera_checkbox.isChecked()
+        self.gui_node.toggle_camera.publish(msg)
 
     def update_image(self, q_image):
         self.video_label.setPixmap(QPixmap.fromImage(q_image))
