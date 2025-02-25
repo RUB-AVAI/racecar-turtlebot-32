@@ -18,32 +18,6 @@ def filter_scan(scan: LaserScan):
         if scan.ranges[r] > 1:
             scan.ranges[r] = 0
 
-def cluster(scan: LaserScan):
-    # Cluster a region of interest from the scan.
-    # For example, use a subset of indices (147 to 203) similar to your original code.
-    fov = scan.ranges[147:203]
-    index = -1
-    error = 0.1
-    last = 0
-    clusters = []
-    for angle, distance in enumerate(fov):
-        if distance == 0:
-            continue
-        # Start a new cluster if difference is large.
-        if abs(distance - last) > distance * 0.1:
-            clusters.append((angle, angle, distance))
-            last = distance
-            index += 1
-        elif abs(distance - last) <= (distance * error):
-            start, end, total = clusters[index]
-            clusters[index] = (start, angle, total + distance)
-            last = distance
-    # Average the distances in each cluster.
-    for x in range(len(clusters)):
-        start, end, total = clusters[x]
-        clusters[x] = (start, end, total / ((end - start) + 1))
-    return clusters
-
 class LidarFusion(Node):
     def __init__(self):
         
@@ -58,7 +32,7 @@ class LidarFusion(Node):
 
         # Synchronize the two topics.
         self.ts = message_filters.ApproximateTimeSynchronizer(
-            [self.lidar_sub, self.detection_sub], queue_size=50, slop=0.1, allow_headerless=False)
+            [self.lidar_sub, self.detection_sub], queue_size=300, slop=0.1)
 
         # Publisher for fused detections.
         self.publisher_lidar = self.create_publisher(DetectionArrayStamped, "fused_detections", 10)
@@ -67,7 +41,7 @@ class LidarFusion(Node):
 
     def fusion_callback(self, lidar_scan, detection_msg):
         # Process the lidar scan.
-        clusters = cluster(lidar_scan)
+        clusters = self.cluster(lidar_scan)
         self.get_logger().info(f"Clusters found: {clusters}")
 
         fused = []  # Will store tuples like (cluster_center, lidar_distance, detection_label)
@@ -101,6 +75,36 @@ class LidarFusion(Node):
             fused_msg.detectionarray.detections.append(det)
 
         self.publisher_lidar.publish(fused_msg)
+
+    
+    def cluster(self, scan: LaserScan):
+        self.get_logger().info(str(len(scan.ranges)))
+        # Cluster a region of interest from the scan.
+        # For example, use a subset of indices (147 to 203) similar to your original code.
+        fov_range = 69
+        fov_offset = 270//2
+        fov = scan.ranges[(fov_offset-fov_range//2)*4:(fov_offset+fov_range//2)*4]
+        index = -1
+        error = 0.1
+        last = 0
+        clusters = []
+        for angle, distance in enumerate(fov):
+            if distance == 0:
+                continue
+            # Start a new cluster if difference is large.
+            if abs(distance - last) > distance * 0.1:
+                clusters.append((angle, angle, distance))
+                last = distance
+                index += 1
+            elif abs(distance - last) <= (distance * error):
+                start, end, total = clusters[index]
+                clusters[index] = (start, angle, total + distance)
+                last = distance
+        # Average the distances in each cluster.
+        for x in range(len(clusters)):
+            start, end, total = clusters[x]
+            clusters[x] = (start, end, total / ((end - start) + 1))
+        return clusters
 
 def main(args=None):
     rclpy.init(args=args)
