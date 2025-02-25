@@ -5,12 +5,15 @@ from avai_messages.msg import Detection, DetectionArray, DetectionArrayStamped
 from rclpy.qos import qos_profile_sensor_data
 import message_filters
 
-def lin_map(x):
-    # Maps an index (or angle value) to a normalized value.
-    if x < 30:
-        return 1 - (1 / 62 * x)
-    else:
-        return 1 - (1 / 56 * x)
+def normalize_x_center(x_center, fov_offset, fov_range):
+    min_x_center = 0
+    max_x_center = 272
+    min_angle = -34.5
+    max_angle = 34.5
+    print(f"x_center: {x_center}, min_x_center: {min_x_center}, max_x_center: {max_x_center}")
+    normalized_angle = ((x_center - min_x_center) / (max_x_center - min_x_center)) * (max_angle - min_angle) + min_angle
+    print(f"normalized_angle: {normalized_angle}")
+    return normalized_angle
 
 def filter_scan(scan: LaserScan):
     # Optional: set values above a threshold to zero.
@@ -21,7 +24,10 @@ def filter_scan(scan: LaserScan):
 def cluster(scan: LaserScan):
     # Cluster a region of interest from the scan.
     # For example, use a subset of indices (147 to 203) similar to your original code.
-    fov = scan.ranges[147:203]
+    fov_range = 69
+    fov_offset = 270//2
+    fov = scan.ranges[(fov_offset-fov_range//2)*4:(fov_offset+fov_range//2)*4]
+    print(f"FOV: {fov} (len={len(fov)})")
     index = -1
     error = 0.1
     last = 0
@@ -30,7 +36,7 @@ def cluster(scan: LaserScan):
         if distance == 0:
             continue
         # Start a new cluster if difference is large.
-        if abs(distance - last) > distance * 0.1:
+        if abs(distance - last) > distance * 0.015:
             clusters.append((angle, angle, distance))
             last = distance
             index += 1
@@ -42,11 +48,14 @@ def cluster(scan: LaserScan):
     for x in range(len(clusters)):
         start, end, total = clusters[x]
         clusters[x] = (start, end, total / ((end - start) + 1))
-    return clusters
+
+    filtered_clusters = [cluster for cluster in clusters if (cluster[1] - cluster[0]) >= 4]
+
+    return filtered_clusters
 
 class LidarFusion(Node):
     def __init__(self):
-        
+
         super().__init__("lidar_fusion")
         self.lidar_scan = None
 
@@ -80,12 +89,16 @@ class LidarFusion(Node):
                 # Compute a center value for the cluster.
                 cluster_center = (start + end) / 2.0
                 # Map the cluster center to a comparable value.
-                possible_box = lin_map(cluster_center)
+                fov_range = 69
+                fov_offset = 270//2
+                possible_box = normalize_x_center(cluster_center, fov_offset, fov_range)
+
                 # If the mapped value is close enough to the detection angle, fuse the data.
-                if abs(possible_box - detection.angle) < 0.04:
+                self.get_logger().info(f"Possible box: {possible_box}, Detection angle: {detection.angle}, cluster_center: {cluster_center}")
+                if abs(possible_box - detection.angle) < 0.4:
                     # If multiple clusters match, you might choose the one with the lower distance.
                     fused.append((cluster_center, dist, detection.label))
-        
+
         self.get_logger().info(f"Fused detections: {fused}")
 
         # Build a DetectionArray message with the fused information.
