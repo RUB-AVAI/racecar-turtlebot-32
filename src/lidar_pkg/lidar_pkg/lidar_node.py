@@ -4,54 +4,20 @@ from rclpy.node import Node
 from avai_messages.msg import Detection, DetectionArray, DetectionArrayStamped
 from rclpy.qos import qos_profile_sensor_data
 import message_filters
+from sklearn.cluster import DBSCAN
+import numpy as np
 
-def normalize_x_center(x_center, fov_offset, fov_range):
+def normalize_x_center(x_center):
+    # all inclusive
     min_x_center = 0
-    max_x_center = 272
+    max_x_center = 275
     min_angle = -34.5
     max_angle = 34.5
-    print(f"x_center: {x_center}, min_x_center: {min_x_center}, max_x_center: {max_x_center}")
+    #print(f"x_center: {x_center}, min_x_center: {min_x_center}, max_x_center: {max_x_center}")
     normalized_angle = ((x_center - min_x_center) / (max_x_center - min_x_center)) * (max_angle - min_angle) + min_angle
-    print(f"normalized_angle: {normalized_angle}")
+    #print(f"normalized_angle: {normalized_angle}")
     return normalized_angle
 
-def filter_scan(scan: LaserScan):
-    # Optional: set values above a threshold to zero.
-    for r in range(len(scan.ranges)):
-        if scan.ranges[r] > 1:
-            scan.ranges[r] = 0
-
-def cluster(scan: LaserScan):
-    # Cluster a region of interest from the scan.
-    # For example, use a subset of indices (147 to 203) similar to your original code.
-    fov_range = 69
-    fov_offset = 270//2
-    fov = scan.ranges[(fov_offset-fov_range//2)*4:(fov_offset+fov_range//2)*4]
-    print(f"FOV: {fov} (len={len(fov)})")
-    index = -1
-    error = 0.1
-    last = 0
-    clusters = []
-    for angle, distance in enumerate(fov):
-        if distance == 0:
-            continue
-        # Start a new cluster if difference is large.
-        if abs(distance - last) > distance * 0.015:
-            clusters.append((angle, angle, distance))
-            last = distance
-            index += 1
-        elif abs(distance - last) <= (distance * error):
-            start, end, total = clusters[index]
-            clusters[index] = (start, angle, total + distance)
-            last = distance
-    # Average the distances in each cluster.
-    for x in range(len(clusters)):
-        start, end, total = clusters[x]
-        clusters[x] = (start, end, total / ((end - start) + 1))
-
-    filtered_clusters = [cluster for cluster in clusters if (cluster[1] - cluster[0]) >= 4]
-
-    return filtered_clusters
 
 class LidarFusion(Node):
     def __init__(self):
@@ -77,24 +43,34 @@ class LidarFusion(Node):
     def fusion_callback(self, lidar_scan, detection_msg):
         # Process the lidar scan.
         clusters = self.cluster(lidar_scan)
-        self.get_logger().info(f"Clusters found: {clusters}")
+        # filter clusters that are too far away
+        keepclusters = []
+        for cluster in clusters:
+            if cluster[0] <= 2:
+                keepclusters.append(cluster)
+        clusters = np.array(keepclusters)
+        if len(clusters) <= 0:
+            self.get_logger().info(f"No Clusters")
+            return
+        # normalize rescale angle values to a range of 69 degrees
+        angles = normalize_x_center(clusters[:,1])
+        #self.get_logger().info(f"{angles} {clusters}")
+        clusters = np.stack((clusters[:,0],angles),axis=-1)
 
+        self.get_logger().info(f"Clusters found: {clusters}")
+        
         fused = []  # Will store tuples like (cluster_center, lidar_distance, detection_label)
 
         # Loop through each detection from the YOLO node.
         # Each detection in detection_msg.detectionarray.detections should include fields: angle, z_in_meters, label.
         for detection in detection_msg.detectionarray.detections:
             for cluster_data in clusters:
-                start, end, dist = cluster_data
-                # Compute a center value for the cluster.
-                cluster_center = (start + end) / 2.0
+                cluster_center, dist = cluster_data
                 # Map the cluster center to a comparable value.
-                fov_range = 69
-                fov_offset = 270//2
-                possible_box = normalize_x_center(cluster_center, fov_offset, fov_range)
+                possible_box = normalize_x_center(cluster_center)
 
                 # If the mapped value is close enough to the detection angle, fuse the data.
-                self.get_logger().info(f"Possible box: {possible_box}, Detection angle: {detection.angle}, cluster_center: {cluster_center}")
+                #self.get_logger().info(f"Possible box: {possible_box}, Detection angle: {detection.angle}, cluster_center: {cluster_center}")
                 if abs(possible_box - detection.angle) < 0.4:
                     # If multiple clusters match, you might choose the one with the lower distance.
                     fused.append((cluster_center, dist, detection.label))
@@ -115,35 +91,36 @@ class LidarFusion(Node):
 
         self.publisher_lidar.publish(fused_msg)
 
-
+    
     def cluster(self, scan: LaserScan):
-        self.get_logger().info(str(len(scan.ranges)))
         # Cluster a region of interest from the scan.
         # For example, use a subset of indices (147 to 203) similar to your original code.
         fov_range = 69
         fov_offset = 270//2
-        fov = scan.ranges[(fov_offset-fov_range//2)*4:(fov_offset+fov_range//2)*4]
-        index = -1
-        error = 0.1
-        last = 0
+        fov = scan.ranges[int((fov_offset-fov_range/2)*4):int((fov_offset+fov_range/2)*4)]
+        # fov contains 4*69=276 values 
+        #self.get_logger().info(str([(i,a) for i,a in enumerate(fov) if a < 1.5]))
+        indices = np.arange(0, len(fov)).astype(float)
+        indices/=100
+        fov = np.stack((fov,indices),axis=-1)
+        print(fov.shape)
+        
+        dbscan = DBSCAN(eps=.025, min_samples=2)
+        labels = dbscan.fit_predict(fov)
+        unique_labels = np.unique(labels)
+        #self.get_logger().info(f"clusternum: {len(unique_labels)}")
         clusters = []
-        for angle, distance in enumerate(fov):
-            if distance == 0:
+        for label in unique_labels:
+            if label == -1:
                 continue
-            # Start a new cluster if difference is large.
-            if abs(distance - last) > distance * 0.1:
-                clusters.append((angle, angle, distance))
-                last = distance
-                index += 1
-            elif abs(distance - last) <= (distance * error):
-                start, end, total = clusters[index]
-                clusters[index] = (start, angle, total + distance)
-                last = distance
-        # Average the distances in each cluster.
-        for x in range(len(clusters)):
-            start, end, total = clusters[x]
-            clusters[x] = (start, end, total / ((end - start) + 1))
+            angles = fov[labels==label]
+            angles
+            #self.get_logger().info(f"{label}: {angles}")
+            clusters.append((np.mean(angles[:,0]), int(angles[:,1][len(angles)//2]*100)))
+        clusters = np.array(clusters)
+        #self.get_logger().info(str(clusters[clusters[:,0]<1]))
         return clusters
+
 
 def main(args=None):
     rclpy.init(args=args)
