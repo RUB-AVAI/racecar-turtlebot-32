@@ -9,7 +9,7 @@ from PyQt5.QtCore import QTimer, Qt
 from threading import Thread
 from rclpy.executors import MultiThreadedExecutor
 from ackermann_msgs.msg import AckermannDriveStamped
-from avai_messages.msg import OccupancyMapState, Polygon
+from avai_messages.msg import OccupancyMapState, Polygon, DetectionArrayStamped
 from std_msgs.msg import Bool
 from std_msgs.msg import Float32
 from sensor_msgs.msg import Image
@@ -42,6 +42,11 @@ class GuiNode(Node):
             'detections/images',
             self.annotated_image_callback,
             10)
+        self.subscription_lidar_points = self.create_subscription(
+            DetectionArrayStamped,
+            '/fused_detections',
+            self.lidar_points_callback,
+            10)
         self.reset_occupancy_map = self.create_publisher(
             Bool, '/reset_occupancy_map', qos_profile_system_default)
         self.toggle_autodrive = self.create_publisher(
@@ -50,13 +55,14 @@ class GuiNode(Node):
             Bool, '/toggle_camera', qos_profile_system_default)
         self.publisher_middlepoint_width = self.create_publisher(
             Float32, '/middlepoint_width', qos_profile_system_default)
-        
+
         self.subscription_occupancymap.registerCallback(self.occupancy_map_callback)
         self.subscription_middlepoint.registerCallback(self.middlepoint_callback)
         # self.subscription_odom.registerCallback(self.callback_test)
         self.publisher_ = self.create_publisher(AckermannDriveStamped, 'drive', 10)
         self.image = None
         self.classedpoints = None
+        self.lidarpoints = None
         self.turtle = None
         self.middlepoints = []
     # def callback_test(self, msg):
@@ -71,6 +77,12 @@ class GuiNode(Node):
         # self.get_logger().info(f"Orientation: x={orientation.x}, y={orientation.y}, z={orientation.z}, w={orientation.w}")
         # self.get_logger().info(f"Linear Velocity: x={linear_velocity.x}, y={linear_velocity.y}, z={linear_velocity.z}")
         # self.get_logger().info(f"Angular Velocity: x={angular_velocity.x}, y={angular_velocity.y}, z={angular_velocity.z}")
+
+    def lidar_points_callback(self, msg):
+        self.get_logger().info('Received lidar points')
+        self.lidarpoints = msg.detectionarray.detections
+        self.hmi.update_map()
+
     def middlepoint_callback(self, msg):
         self.get_logger().info('Received middle points')
         self.middlepoints = msg.points
@@ -116,7 +128,10 @@ class MainWindow(QMainWindow):
         self.checkbox = QCheckBox('Enable Key Press', self)
         self.checkbox.setGeometry(10, 50, 150, 30)
         self.checkbox.setChecked(True)  # Enable by default
+        self.checkbox_lidar = QCheckBox('Enable Lidar', self)
+        self.checkbox_lidar.setGeometry(10, 50, 150, 30)
         layout.addWidget(self.checkbox)
+        layout.addWidget(self.checkbox_lidar)
 
         # SPEED INPUT
         speed_layout = QHBoxLayout()
@@ -292,7 +307,8 @@ class MainWindow(QMainWindow):
             turtle_y = self.gui_node.turtle.y
             turtle_angle = self.gui_node.turtle.angle
             ax.quiver(turtle_x, turtle_y, np.cos(turtle_angle), np.sin(turtle_angle), scale=10, color='red')
-        if self.gui_node.classedpoints:
+        if self.gui_node.classedpoints and  not self.checkbox_lidar.isChecked():
+            self.gui_node.lidarpoints = None
             for point in self.gui_node.classedpoints:
                 x.append(point.x)
                 y.append(point.y)
@@ -304,13 +320,31 @@ class MainWindow(QMainWindow):
                     color.append('blue')
                 else:
                     color.append('green')
-        if self.gui_node.middlepoints:
+        if self.gui_node.middlepoints and not self.checkbox_lidar.isChecked():
+            self.gui_node.lidarpoints = None
             for point in self.gui_node.middlepoints:
                 mx.append(point.x)
                 my.append(point.y)
+        if self.checkbox_lidar.isChecked():
+            self.gui_node.classedpoints = None
+            self.gui_node.turtle = None
+            self.gui_node.middlepoints = None
+            # Visualize the lidar points
+            for point in self.gui_node.lidarpoints:
+                x.append(point.angle)
+                y.append(point.z_in_meters)
+                if point.label == 0:
+                    color.append('yellow')
+                elif point.label == 1:
+                    color.append('orange')
+                elif point.label == 2:
+                    color.append('blue')
+                else:
+                    color.append('green')
         ax.scatter(x, y, c=color)
-        ax.scatter(mx, my, c='green')
-        ax.plot(mx, my, color='green')  # Connect all points with a line
+        if mx and my:
+            ax.scatter(mx, my, c='green')
+            ax.plot(mx, my, color='green')  # Connect all points with a line
         ax.set_xlabel('X')
         ax.set_ylabel('Y')
         #ax.set_xlim((0,15))
