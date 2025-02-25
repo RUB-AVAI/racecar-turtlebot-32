@@ -53,9 +53,9 @@ class LidarFusion(Node):
             self.get_logger().info(f"No Clusters")
             return
         # normalize rescale angle values to a range of 69 degrees
-        angles = normalize_x_center(clusters[:,1])
+        #angles = normalize_x_center(clusters[:,1])
         #self.get_logger().info(f"{angles} {clusters}")
-        clusters = np.stack((clusters[:,0],angles),axis=-1)
+        #clusters = np.stack((clusters[:,0],angles),axis=-1)
 
         self.get_logger().info(f"Clusters found: {clusters}")
         
@@ -65,15 +65,16 @@ class LidarFusion(Node):
         # Each detection in detection_msg.detectionarray.detections should include fields: angle, z_in_meters, label.
         for detection in detection_msg.detectionarray.detections:
             for cluster_data in clusters:
-                cluster_center, dist = cluster_data
+                dist, cluster_center = cluster_data
                 # Map the cluster center to a comparable value.
                 possible_box = normalize_x_center(cluster_center)
 
                 # If the mapped value is close enough to the detection angle, fuse the data.
                 #self.get_logger().info(f"Possible box: {possible_box}, Detection angle: {detection.angle}, cluster_center: {cluster_center}")
-                if abs(possible_box - detection.angle) < 0.4:
+                #self.get_logger().info(f"{possible_box} {detection.angle}")
+                if abs(possible_box - detection.angle) < 5:
                     # If multiple clusters match, you might choose the one with the lower distance.
-                    fused.append((cluster_center, dist, detection.label))
+                    fused.append((possible_box, dist, detection.label))
 
         self.get_logger().info(f"Fused detections: {fused}")
 
