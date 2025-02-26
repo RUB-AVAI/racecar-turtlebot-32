@@ -106,11 +106,11 @@ class ConeDetectionNode(Node):
                         z_in_meters = z_value * 0.001  # If depth values are in millimeters
                         z_text = f"Z: {z_in_meters:.2f} m"
                     else:
-                        continue
+                        #continue
                         z_in_meters = float('nan')
                         z_text = "Z: N/A"
                 else:
-                    continue
+                    #continue
                     z_in_meters = float('nan')
                     z_text = "Z: Out of bounds"
 

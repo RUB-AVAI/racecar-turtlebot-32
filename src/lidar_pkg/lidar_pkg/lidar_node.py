@@ -16,7 +16,7 @@ def normalize_x_center(x_center):
     #print(f"x_center: {x_center}, min_x_center: {min_x_center}, max_x_center: {max_x_center}")
     normalized_angle = ((x_center - min_x_center) / (max_x_center - min_x_center)) * (max_angle - min_angle) + min_angle
     #print(f"normalized_angle: {normalized_angle}")
-    return normalized_angle
+    return -normalized_angle # lidar angle is counter-clockwise, while YOLO angle is clockwise
 
 
 class LidarFusion(Node):
@@ -52,27 +52,24 @@ class LidarFusion(Node):
         if len(clusters) <= 0:
             self.get_logger().info(f"No Clusters")
             return
-        # normalize rescale angle values to a range of 69 degrees
-        #angles = normalize_x_center(clusters[:,1])
-        #self.get_logger().info(f"{angles} {clusters}")
-        #clusters = np.stack((clusters[:,0],angles),axis=-1)
 
-        self.get_logger().info(f"Clusters found: {clusters}")
-        fused = []  # Will store tuples like (cluster_center, lidar_distance, detection_label)
+        #self.get_logger().info(f"{len(clusters)} Clusters found: {clusters}")
+        fused = []  # Will store tuples like (cluster_center (angle), lidar_distance, detection_label)
 
         # Loop through each detection from the YOLO node.
         # Each detection in detection_msg.detectionarray.detections should include fields: angle, z_in_meters, label.
         for detection in detection_msg.detectionarray.detections:
             for cluster_data in clusters:
                 dist, cluster_center = cluster_data
-                # Map the cluster center to a comparable value.
+                # Map the cluster center to a angle value
                 possible_box = normalize_x_center(cluster_center)
 
-                # If the mapped value is close enough to the detection angle, fuse the data.
-                self.get_logger().info(f"Possible box: {possible_box}, Detection angle: {detection.angle}, cluster_center: {cluster_center}")
+                # If the cluster angle is close enough to the detection angle, fuse the data.
+                #self.get_logger().info(f"Possible box: {possible_box}, Detection angle: {detection.angle}, cluster_center: {cluster_center}")
                 #self.get_logger().info(f"{possible_box} {detection.angle}")
-                if abs(possible_box - detection.angle) < 2:
+                if abs(possible_box - detection.angle) < 3:
                     # If multiple clusters match, you might choose the one with the lower distance.
+                    # currently we don't?
                     fused.append((possible_box, dist, detection.label))
 
         self.get_logger().info(f"Fused detections: {fused}")
@@ -112,30 +109,30 @@ class LidarFusion(Node):
         indices = np.arange(0, len(fov)).astype(float)
         indices/=100
         fov = np.stack((fov,indices),axis=-1)
-        print(fov.shape)
-        self.publisher_lidar.publish(fused_msg)
-        dbscan = DBSCAN(eps=.0122, min_samples=3)
+
+        #print(fov.shape)
+
+        #self.publisher_lidar.publish(fused_msg)
+        dbscan = DBSCAN(eps=.05, min_samples=3)
         labels = dbscan.fit_predict(fov)
         unique_labels = np.unique(labels)
         #self.get_logger().info(f"clusternum: {len(unique_labels)}")
+
         clusters = []
         for label in unique_labels:
             if label == -1:
                 continue
             angles = fov[labels==label]
-            if len(angles) < 4 or len(angles) > 50:
+            if len(angles) < 4:
                 continue
-            angles
-            # Calculate mean distance
-            mean_distance = np.mean(angles[:, 0])
 
-            # Filter out angles that deviate significantly from the mean distance
-            threshold = 0.2 * mean_distance  # 10% deviation threshold
-            filtered_angles = angles[np.abs(angles[:, 0] - mean_distance) <= threshold]
-            #self.get_logger().info(f"{label}: {angles}")
-            clusters.append((np.mean(filtered_angles[:,0]), int(filtered_angles[:,1][len(filtered_angles)//2]*100)))
+            # Filter out angles that are too far away
+            # Is also filtered in fusion, so this might not be necessary
+            angles = angles[angles[:,0] < 10]
+            # use mean distance and mean angle as distance and angle of cluster
+            # angles *100 to convert from float to integer value
+            clusters.append((np.mean(angles[:,0]), np.mean(angles[:,1]*100)))
         clusters = np.array(clusters)
-        #self.get_logger().info(str(clusters[clusters[:,0]<1]))
         return clusters
 
 

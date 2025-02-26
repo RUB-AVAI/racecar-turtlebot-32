@@ -69,7 +69,7 @@ class Controller(Node):
             distance_to_last_target = self.calculate_distance(self.target, rob_pos)
             self.get_logger().info(str(self.target))
             self.get_logger().info(str(distance_to_last_target))
-            if distance_to_last_target < 2:
+            if distance_to_last_target < 0.1:
                 self.last_target = self.target
                 self.target = None
         else:
@@ -88,7 +88,7 @@ class Controller(Node):
                 self.get_logger().info("Could not find two points with different labels")
 
     def find_nearest_points(self, points, rob_pos, line_step):
-        distance_threshold = 1
+        distance_threshold = 2
         sign = lambda x: copysign(1, x)
         # get front points
         yellow = []
