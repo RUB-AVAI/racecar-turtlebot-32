@@ -307,7 +307,7 @@ class MainWindow(QMainWindow):
             turtle_y = self.gui_node.turtle.y
             turtle_angle = self.gui_node.turtle.angle
             ax.quiver(turtle_x, turtle_y, np.cos(turtle_angle), np.sin(turtle_angle), scale=10, color='red')
-        if self.gui_node.classedpoints and  not self.checkbox_lidar.isChecked():
+        if self.gui_node.classedpoints and not self.checkbox_lidar.isChecked():
             self.gui_node.lidarpoints = None
             for point in self.gui_node.classedpoints:
                 x.append(point.x)
@@ -339,6 +339,24 @@ class MainWindow(QMainWindow):
                     color.append('orange')
                 elif point.label == 2:
                     color.append('blue')
+                elif point.label == 3:
+                    color.append('red')
+                elif point.label == 4:
+                    color.append('purple')
+                elif point.label == 5:
+                    color.append('cyan')
+                elif point.label == 6:
+                    color.append('pink')
+                elif point.label == 7:
+                    color.append('black')
+                elif point.label == 8:
+                    color.append('brown')
+                elif point.label == 9:
+                    color.append('magenta')
+                elif point.label == 10:
+                    color.append('gold')
+                elif point.label == 11:
+                    color.append('gray')
                 else:
                     color.append('green')
         ax.scatter(x, y, c=color)
