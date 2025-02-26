@@ -37,6 +37,7 @@ class LidarFusion(Node):
 
         # Publisher for fused detections.
         self.publisher_lidar = self.create_publisher(DetectionArrayStamped, "fused_detections", 10)
+        self.publisher_lidar_raw_values = self.create_publisher(DetectionArrayStamped, "lidar_values", 10)
         self.get_logger().info("Lidar Fusion Node started (with YOLO detections).")
         self.ts.registerCallback(self.fusion_callback)
 
@@ -95,15 +96,6 @@ class LidarFusion(Node):
         fov_range = 69
         fov_offset = 270//2
         fov = scan.ranges[int((fov_offset-fov_range/2)*4):int((fov_offset+fov_range/2)*4)]
-        fused_msg = DetectionArrayStamped()
-        for i, distance in enumerate(fov):
-                new_angle = normalize_x_center(i)  # Get the real indices
-                det = Detection()
-                # You can decide whether to keep the original detection angle or recompute it based on the cluster.
-                det.angle = float(new_angle) # Using the detection angle from YOLO.
-                det.z_in_meters = distance  # Use the distance computed from lidar.
-                det.label = 2
-                fused_msg.detectionarray.detections.append(det)
         # fov contains 4*69=276 values
         #self.get_logger().info(str([(i,a) for i,a in enumerate(fov) if a < 1.5]))
         indices = np.arange(0, len(fov)).astype(float)
@@ -112,12 +104,11 @@ class LidarFusion(Node):
 
         #print(fov.shape)
 
-        #self.publisher_lidar.publish(fused_msg)
         dbscan = DBSCAN(eps=.05, min_samples=3)
         labels = dbscan.fit_predict(fov)
         unique_labels = np.unique(labels)
         #self.get_logger().info(f"clusternum: {len(unique_labels)}")
-
+        fused_msg = DetectionArrayStamped()
         clusters = []
         for label in unique_labels:
             if label == -1:
@@ -132,6 +123,15 @@ class LidarFusion(Node):
             # use mean distance and mean angle as distance and angle of cluster
             # angles *100 to convert from float to integer value
             clusters.append((np.mean(angles[:,0]), np.mean(angles[:,1]*100)))
+
+            for angle in angles:
+                    det = Detection()
+                    det.angle = angle[1]
+                    det.z_in_meters = angle[0]
+                    det.label = int(label)
+                    fused_msg.detectionarray.detections.append(det)
+
+        self.publisher_lidar_raw_values.publish(fused_msg)
         clusters = np.array(clusters)
         return clusters
 

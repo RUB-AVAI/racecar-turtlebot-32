@@ -44,7 +44,7 @@ class GuiNode(Node):
             10)
         self.subscription_lidar_points = self.create_subscription(
             DetectionArrayStamped,
-            '/fused_detections',
+            '/lidar_values',
             self.lidar_points_callback,
             10)
         self.reset_occupancy_map = self.create_publisher(
