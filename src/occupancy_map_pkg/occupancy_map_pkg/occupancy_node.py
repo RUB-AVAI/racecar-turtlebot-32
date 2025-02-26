@@ -85,7 +85,7 @@ class OccupancyNode(Node):
 
         predict_blue_cones = True
 
-        fixed_width = 0.1
+        fixed_width = self.middlepoint_width
 
         for detection in msg.detectionarray.detections:
             if detection.z_in_meters > 0.75:
