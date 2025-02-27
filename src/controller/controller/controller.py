@@ -29,18 +29,6 @@ class Controller(Node):
         self.middlepoints = []
         self.toggle_autodrive = True
 
-    def run(self):
-        settings = termios.tcgetattr(sys.stdin)
-        try:
-            tty.setcbreak(sys.stdin.fileno())
-            while True:
-                key = sys.stdin.read(3)  # Read 3 characters for escape sequences
-                if key == '\x03':  # Ctrl+C
-                    break
-                self.process_key(key)
-        finally:
-            termios.tcsetattr(sys.stdin, termios.TCSADRAIN, settings)
-
     def reset_middlepoints_callback(self, msg):
         self.get_logger().info("Resetting middlepoints")
         if msg.data:
@@ -55,8 +43,8 @@ class Controller(Node):
         self.get_logger().info(f"Autodrive: {self.toggle_autodrive}")
 
     def occupancy_callback(self, msg):
-        if self.subscription_toggle_autodrive:
-            return
+        #if self.subscription_toggle_autodrive:
+        #    return
         self.get_logger().info("Received cone data")
         points = msg.classedpoints
         rob_pos = msg.turtle
@@ -168,7 +156,7 @@ class Controller(Node):
         msg.drive.steering_angle = angle_to_midpoint
         self.get_logger().info(f"Driving to midpoint: {midpoint}, speed: {msg.drive.speed}, angle: {msg.drive.steering_angle}")
 
-        self.publisher_.publish(self)
+        self.publisher_.publish(msg)
 
 
 def main(args=None):

@@ -46,6 +46,7 @@ class LidarFusion(Node):
         # filter clusters that are too far away
         keepclusters = []
         for cluster in clusters:
+            # filter out clusters that are too far away
             if cluster[0] <= 2:
                 keepclusters.append(cluster)
         clusters = np.array(keepclusters)
@@ -69,24 +70,24 @@ class LidarFusion(Node):
                 #self.get_logger().info(f"{possible_box} {detection.angle}")
                 if abs(possible_box - detection.angle) < 3:
                     # If multiple clusters match, you might choose the one with the lower distance.
-                    # currently we don't?
+                    # currently we don't? Hopefully filter that out by distances already
                     fused.append((possible_box, dist, detection.label))
 
-        self.get_logger().info(f"Fused detections: {fused}")
+        self.get_logger().info(f"{len(fused)} Fused detections: {fused}")
 
         # Build a DetectionArray message with the fused information.
         fused_msg = DetectionArrayStamped()
         fused_msg.header = detection_msg.header  # Use the detection header timestamp.
-        for fused_item in fused:
-            cluster_center, lidar_dist, label = fused_item
+        for fused_detection in fused:
+            angle, distance, label = fused_detection
             det = Detection()
             # You can decide whether to keep the original detection angle or recompute it based on the cluster.
-            det.angle = cluster_center # CHANGED IT TO CLUSTER CENTER MAYBE SHOULD BE DETECTION ANGLE (25.02.2025)
-            det.z_in_meters = lidar_dist  # Use the distance computed from lidar.
+            det.angle = angle # CHANGED IT TO CLUSTER CENTER MAYBE SHOULD BE DETECTION ANGLE (25.02.2025)
+            det.z_in_meters = distance  # Use the distance computed from lidar.
             det.label = label
             fused_msg.detectionarray.detections.append(det)
 
-        #self.publisher_lidar.publish(fused_msg) #NEEDS TO BE ACTIVATED AGAIN
+        self.publisher_lidar.publish(fused_msg)
 
 
     def cluster(self, scan: LaserScan):
@@ -95,24 +96,15 @@ class LidarFusion(Node):
         fov_range = 69
         fov_offset = 270//2
         fov = scan.ranges[int((fov_offset-fov_range/2)*4):int((fov_offset+fov_range/2)*4)]
-        fused_msg = DetectionArrayStamped()
-        for i, distance in enumerate(fov):
-                new_angle = normalize_x_center(i)  # Get the real indices
-                det = Detection()
-                # You can decide whether to keep the original detection angle or recompute it based on the cluster.
-                det.angle = float(new_angle) # Using the detection angle from YOLO.
-                det.z_in_meters = distance  # Use the distance computed from lidar.
-                det.label = 2
-                fused_msg.detectionarray.detections.append(det)
         # fov contains 4*69=276 values
         #self.get_logger().info(str([(i,a) for i,a in enumerate(fov) if a < 1.5]))
+
         indices = np.arange(0, len(fov)).astype(float)
         indices/=100
         fov = np.stack((fov,indices),axis=-1)
 
         #print(fov.shape)
 
-        #self.publisher_lidar.publish(fused_msg)
         dbscan = DBSCAN(eps=.05, min_samples=3)
         labels = dbscan.fit_predict(fov)
         unique_labels = np.unique(labels)

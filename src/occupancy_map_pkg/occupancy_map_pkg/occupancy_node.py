@@ -20,14 +20,9 @@ class OccupancyNode(Node):
         self.subscription_detections = message_filters.Subscriber(
             self,
             DetectionArrayStamped,
-            '/detections')
-        self.subscription_middlepoint_width = message_filters.Subscriber(
-            self,
-            Float32,
-            '/middlepoint_width')
+            'fused_detections') # /detections
         self.cone_sync = message_filters.ApproximateTimeSynchronizer([self.subscription_odom, self.subscription_detections], 1000, .2)
         self.cone_sync.registerCallback(self.callback_synchronised)
-        self.subscription_middlepoint_width.registerCallback(self.callback_middlepoint_width)
 
         self.publisher_occupancymap = self.create_publisher(OccupancyMapState, "occupancy_map", 10)
 
@@ -38,17 +33,13 @@ class OccupancyNode(Node):
         # map is a list of points (x, y, classID)
         self.map = []
         self.max_points = 10
-        self.middlepoint_width = None
+
         self.turtle_pos = [float(0), float(0)]
         self.turtle_angle = float(0)
         self.turtle_state_is_set = False
 
         self.get_logger().info("Occupancy Node has been started.")
 
-    def callback_middlepoint_width(self, msg):
-        self.get_logger().info(f"Middlepoint width: {msg.data}")
-        self.middlepoint_width = msg.data
-        
     def callback_synchronised(self, odom, detections):
         self.odom_callback(odom)
         self.detections_callback(detections)
@@ -83,32 +74,30 @@ class OccupancyNode(Node):
             self.get_logger().info("Turtlebot state not set yet")
             return
 
-        predict_blue_cones = True
+        predict_blue_cones = False
 
         fixed_width = 0.1
 
         for detection in msg.detectionarray.detections:
-            if detection.z_in_meters > 0.75:
-                continue
-            if detection.z_in_meters < 0.35:
-                continue
+            #if detection.z_in_meters > 0.75:
+            #    continue
             classID = detection.label
             angle = -np.deg2rad(detection.angle) + self.turtle_angle
             turtle_angle = self.turtle_angle
             distance = detection.z_in_meters
 
-            if classID == 0 and predict_blue_cones:
+            """if classID == 0 and predict_blue_cones:
                 continue
 
-            if classID == 2 and np.deg2rad(detection.angle) < 0:
+            if classID == 2 and angle < 0:
                 continue
 
-            if classID == 0 and np.deg2rad(detection.angle) > 0:
-                continue
+            if classID == 0 and angle > 0:
+                continue"""
 
-            x = self.turtle_pos[0] + np.cos(angle) * detection.z_in_meters
-            y = self.turtle_pos[1] + np.sin(angle) * detection.z_in_meters
-            self.get_logger().info(f"Detection: classID={classID}, angle={angle}, turtle_angle={turtle_angle}, distance={distance}, x={x}, y={y}")
+            x = self.turtle_pos[0] + np.cos(angle) * distance
+            y = self.turtle_pos[1] + np.sin(angle) * distance
+            #self.get_logger().info(f"Detection: classID={classID}, angle={angle}, turtle_angle={turtle_angle}, distance={distance}, x={x}, y={y}")
             self.map.append((x, y, classID))
 
             if classID == 2 and predict_blue_cones:
@@ -123,7 +112,7 @@ class OccupancyNode(Node):
 
     def update_map(self):
         points = self.map
-        self.get_logger().info(f"{len(self.map)} points")
+        #self.get_logger().info(f"{len(self.map)} points before DBSCAN")
         dbscan = DBSCAN(eps=0.22, min_samples=2)
         if not points:
             return
@@ -154,7 +143,7 @@ class OccupancyNode(Node):
         self.map = centroids
 
     def publish_map(self):
-        self.get_logger().info('Publishing map')
+        self.get_logger().info(f'Publishing map ({len(self.map)} points)')
         points = []
         for point in self.map:
             cp = ClassedPoint()

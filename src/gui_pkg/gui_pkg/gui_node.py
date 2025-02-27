@@ -127,7 +127,7 @@ class MainWindow(QMainWindow):
         # checkbox to enable/disable keyPressEvent
         self.checkbox = QCheckBox('Enable Key Press', self)
         self.checkbox.setGeometry(10, 50, 150, 30)
-        self.checkbox.setChecked(True)  # Enable by default
+        self.checkbox.setChecked(False)
         self.checkbox_lidar = QCheckBox('Enable Lidar', self)
         self.checkbox_lidar.setGeometry(10, 50, 150, 30)
         layout.addWidget(self.checkbox)
@@ -297,35 +297,49 @@ class MainWindow(QMainWindow):
         mx = []
         my = []
         color = []
-        if self.gui_node.turtle:
-            # Visualize the turtle's position as a blue dot
-            x.append(self.gui_node.turtle.x)
-            y.append(self.gui_node.turtle.y)
-            color.append("red")  # Turtle color
-            # Visualize the turtle's angle as a red arrow
-            turtle_x = self.gui_node.turtle.x
-            turtle_y = self.gui_node.turtle.y
-            turtle_angle = self.gui_node.turtle.angle
-            ax.quiver(turtle_x, turtle_y, np.cos(turtle_angle), np.sin(turtle_angle), scale=10, color='red')
-        if self.gui_node.classedpoints and not self.checkbox_lidar.isChecked():
-            self.gui_node.lidarpoints = None
-            for point in self.gui_node.classedpoints:
-                x.append(point.x)
-                y.append(point.y)
-                if point.c == 0:
-                    color.append('yellow')
-                elif point.c == 1:
-                    color.append('orange')
-                elif point.c == 2:
-                    color.append('blue')
-                else:
-                    color.append('green')
-        if self.gui_node.middlepoints and not self.checkbox_lidar.isChecked():
-            self.gui_node.lidarpoints = None
-            for point in self.gui_node.middlepoints:
-                mx.append(point.x)
-                my.append(point.y)
-        if self.checkbox_lidar.isChecked():
+        if not self.checkbox_lidar.isChecked():
+            if self.gui_node.classedpoints:
+                self.gui_node.lidarpoints = None
+                for point in self.gui_node.classedpoints:
+                    x.append(point.x)
+                    y.append(point.y)
+                    if point.c == 0:
+                        color.append('yellow')
+                    elif point.c == 1:
+                        color.append('orange')
+                    elif point.c == 2:
+                        color.append('blue')
+                    else:
+                        color.append('green')
+                ax.scatter(x, y, c=color)
+            ax.set_xlabel('X')
+            ax.set_ylabel('Y')
+            #ax.set_xlim((0,15))
+            #ax.set_ylim((0,15))
+
+            if not self.auto_limit_checkbox.isChecked():
+                ax.set_xlim(self.xlim_min_input.value(), self.xlim_max_input.value())
+                ax.set_ylim(self.ylim_min_input.value(), self.ylim_max_input.value())
+                        
+            if self.gui_node.turtle:
+                # Visualize the turtle's position as a blue dot
+                x.append(self.gui_node.turtle.x)
+                y.append(self.gui_node.turtle.y)
+                color.append("red")  # Turtle color
+                # Visualize the turtle's angle as a red arrow
+                turtle_x = self.gui_node.turtle.x
+                turtle_y = self.gui_node.turtle.y
+                turtle_angle = self.gui_node.turtle.angle
+                ax.quiver(turtle_x, turtle_y, np.cos(turtle_angle), np.sin(turtle_angle), scale=10, color='red')
+            if self.gui_node.middlepoints:
+                self.gui_node.lidarpoints = None
+                for point in self.gui_node.middlepoints:
+                    mx.append(point.x)
+                    my.append(point.y)
+                if mx and my:
+                    ax.scatter(mx, my, c='green')
+                    ax.plot(mx, my, color='green')  # Connect all points with a line
+        elif self.checkbox_lidar.isChecked():
             self.gui_node.classedpoints = None
             self.gui_node.turtle = None
             self.gui_node.middlepoints = None
@@ -359,20 +373,11 @@ class MainWindow(QMainWindow):
                     color.append('gray')
                 else:
                     color.append('green')
-        ax.scatter(x, y, c=color)
-        if mx and my:
-            ax.scatter(mx, my, c='green')
-            ax.plot(mx, my, color='green')  # Connect all points with a line
-        ax.set_xlabel('X')
-        ax.set_ylabel('Y')
-        #ax.set_xlim((0,15))
-        #ax.set_ylim((0,15))
+            ax.scatter(x, y, c=color)
+            ax.set_xlabel('distance')
+            ax.set_ylabel('angle')
 
-        if not self.auto_limit_checkbox.isChecked():
-            ax.set_xlim(self.xlim_min_input.value(), self.xlim_max_input.value())
-            ax.set_ylim(self.ylim_min_input.value(), self.ylim_max_input.value())
-
-        ax.set_title('Occupancy Map')
+        #ax.set_title('Occupancy Map')
 
         # Refresh the canvas
         self.canvas.draw()
