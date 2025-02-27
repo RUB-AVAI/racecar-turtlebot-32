@@ -26,10 +26,15 @@ def generate_launch_description():
         package="controller",
         executable="controller"
     )
+    lidar = Node(
+        package="lidar_pkg",
+        executable="lidar_node"
+    )
 
     ld.add_action(camera_topic)
     ld.add_action(camera)
     ld.add_action(cone_detection)
+    ld.add_action(lidar)
     ld.add_action(occupancy_map)
-    ld.add_action(controller)
+    #ld.add_action(controller)
     return ld

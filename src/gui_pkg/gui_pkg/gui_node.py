@@ -313,7 +313,7 @@ class MainWindow(QMainWindow):
                     x.append(point.x)
                     y.append(point.y)
                     if point.c == 0:
-                        color.append('yellow')
+                        color.append('gold')
                     elif point.c == 1:
                         color.append('orange')
                     elif point.c == 2:
