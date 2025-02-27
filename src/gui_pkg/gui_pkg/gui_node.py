@@ -44,7 +44,7 @@ class GuiNode(Node):
             10)
         self.subscription_lidar_points = self.create_subscription(
             DetectionArrayStamped,
-            '/fused_detections',
+            '/lidar_values',
             self.lidar_points_callback,
             10)
         self.reset_occupancy_map = self.create_publisher(
@@ -124,14 +124,18 @@ class MainWindow(QMainWindow):
         self.text_label.setGeometry(10, 10, 200, 30)  # Adjust the position and size as needed
         layout.addWidget(self.text_label)
 
+        checkbox_layout_2 = QHBoxLayout()
+
         # checkbox to enable/disable keyPressEvent
         self.checkbox = QCheckBox('Enable Key Press', self)
         self.checkbox.setGeometry(10, 50, 150, 30)
         self.checkbox.setChecked(False)
+        checkbox_layout_2.addWidget(self.checkbox)
         self.checkbox_lidar = QCheckBox('Enable Lidar', self)
         self.checkbox_lidar.setGeometry(10, 50, 150, 30)
-        layout.addWidget(self.checkbox)
-        layout.addWidget(self.checkbox_lidar)
+        checkbox_layout_2.addWidget(self.checkbox_lidar)
+        layout.addLayout(checkbox_layout_2)
+
 
         # SPEED INPUT
         speed_layout = QHBoxLayout()
@@ -211,10 +215,12 @@ class MainWindow(QMainWindow):
         ylim_layout.addWidget(self.ylim_max_input)
         layout.addLayout(ylim_layout)
 
+        checkbox_layout = QHBoxLayout()
+
         # AUTO LIMIT CHECKBOX
         self.auto_limit_checkbox = QCheckBox('Auto Limits', self)
         self.auto_limit_checkbox.setChecked(True)
-        layout.addWidget(self.auto_limit_checkbox)
+        checkbox_layout.addWidget(self.auto_limit_checkbox)
 
         # RESET OCCUPANCY MAP BUTTON
         self.reset_button = QPushButton('Reset Occupancy Map', self)
@@ -227,12 +233,15 @@ class MainWindow(QMainWindow):
         self.autodrive_checkbox.setChecked(True)
         self.autodrive_checkbox.stateChanged.connect(self.publish_autodrive)
         layout.addWidget(self.autodrive_checkbox)
+        checkbox_layout.addWidget(self.autodrive_checkbox)
 
         # TOGGLE CAMERA BUTTON
         self.camera_checkbox = QCheckBox('Camera', self)
         self.camera_checkbox.setChecked(True)
         self.camera_checkbox.stateChanged.connect(self.publish_toggle_camera)
-        layout.addWidget(self.camera_checkbox)
+        checkbox_layout.addWidget(self.camera_checkbox)
+
+        layout.addLayout(checkbox_layout)
 
         occupancymap_layout = QHBoxLayout()
         # Create a Matplotlib figure and canvas

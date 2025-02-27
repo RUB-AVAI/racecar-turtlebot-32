@@ -37,6 +37,7 @@ class LidarFusion(Node):
 
         # Publisher for fused detections.
         self.publisher_lidar = self.create_publisher(DetectionArrayStamped, "fused_detections", 10)
+        self.publisher_lidar_raw_values = self.create_publisher(DetectionArrayStamped, "lidar_values", 10)
         self.get_logger().info("Lidar Fusion Node started (with YOLO detections).")
         self.ts.registerCallback(self.fusion_callback)
 
@@ -109,7 +110,7 @@ class LidarFusion(Node):
         labels = dbscan.fit_predict(fov)
         unique_labels = np.unique(labels)
         #self.get_logger().info(f"clusternum: {len(unique_labels)}")
-
+        fused_msg = DetectionArrayStamped()
         clusters = []
         for label in unique_labels:
             if label == -1:
@@ -124,6 +125,15 @@ class LidarFusion(Node):
             # use mean distance and mean angle as distance and angle of cluster
             # angles *100 to convert from float to integer value
             clusters.append((np.mean(angles[:,0]), np.mean(angles[:,1]*100)))
+
+            for angle in angles:
+                    det = Detection()
+                    det.angle = angle[1]
+                    det.z_in_meters = angle[0]
+                    det.label = int(label)
+                    fused_msg.detectionarray.detections.append(det)
+
+        self.publisher_lidar_raw_values.publish(fused_msg)
         clusters = np.array(clusters)
         return clusters
 
