@@ -63,6 +63,7 @@ class Controller(Node):
         return front > 0
     
     def send_drive_msg(self, speed, steering_angle, jerk, acceleration, stop=False):
+        """steering range might be [-0.24,0.24] or [-0.5,0.5]"""
         if stop:
             msg = AckermannDriveStamped()
             msg.drive.speed = 0.0
@@ -120,7 +121,7 @@ class Controller(Node):
                 if self.points:
                     self.find_nearest_points(self.points, rob_pos, step)
                     if self.target is not None:
-                        self.get_logger().info("helllllllll")
+                        self.get_logger().info("found target")
                         break
                     else:
                         self.send_drive_msg(stop=True)
@@ -146,8 +147,8 @@ class Controller(Node):
         line_distance = 0.05
         x1 = cos(rob_pos["angle"]) * line_distance*line_step + rob_pos["x"]
         y1 = sin(rob_pos["angle"]) * line_distance*line_step + rob_pos["y"]
-        x2 = cos(vect_angle) * 2 + rob_pos["x"]
-        y2 = sin(vect_angle) * 2 + rob_pos["y"]
+        x2 = cos(vect_angle) * 2 + x1#rob_pos["x"]
+        y2 = sin(vect_angle) * 2 + y1#rob_pos["y"]
         for point in points:
             # check if point is "left" or "right" of vector
             front = sign((x2 - x1) * (point.y - y1) - (y2 - y1) * (point.x - x1))
@@ -159,7 +160,7 @@ class Controller(Node):
                         blue.append([point, distance])
                     if point.c == 0:
                         yellow.append([point, distance])
-        if len(yellow) == 0:
+        """if len(yellow) == 0:
             self.get_logger().info("no yellow cones")
             #NEED TO SEARCH HERE
             #self.twist.publish(Twist())
@@ -170,8 +171,8 @@ class Controller(Node):
             #NEED TO SEARCH HERE
             #self.twist.publish(Twist())
             #self.search(0)  # turn slowly in the other direction
-            # return
-        else:
+            # return"""
+        if len(yellow) > 0 and len(blue) > 0:
             yellow.sort(key=lambda x: x[1])
             blue.sort(key=lambda x: x[1])
 
@@ -195,6 +196,24 @@ class Controller(Node):
 
             if self.target == None:
                 self.target = middle_point
+        elif len(yellow) == 0 and len(blue) == 0:
+            self.send_drive_msg(stop=True)
+        elif len(yellow) > 0:
+            yellow.sort(key=lambda x: x[1])
+            nearest_distance = yellow[0][1]
+            if nearest_distance < 1:
+                steering = -0.5
+            else:
+                steering = -0.1
+            self.send_drive_msg(0.5,steering, 0.5, 0.5)
+        else: # blue > 0
+            blue.sort(key=lambda x: x[1])
+            nearest_distance = blue[0][1]
+            if nearest_distance < 1:
+                steering = 0.5
+            else:
+                steering = 0.1
+            self.send_drive_msg(0.5,steering, 0.5, 0.5)
 
     def calculate_distance(self, midpoint, rob_pos):
         return math.sqrt((midpoint[0] - rob_pos["x"]) ** 2 + (midpoint[1] - rob_pos["y"]) ** 2)
