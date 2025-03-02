@@ -29,9 +29,11 @@ class Controller(Node):
         self.subscription_toggle_autodrive = self.create_subscription(
             Bool,
             '/toggle_autodrive', self.drive_reset_steering, 10)
+        
         self.middlepoints = []
         self.toggle_autodrive = True
         self.points = None
+        self.is_stopped = True
 
     def reset_middlepoints_callback(self, msg):
         self.get_logger().info("Resetting middlepoints")
@@ -48,6 +50,7 @@ class Controller(Node):
 
     
     def check_if_point_is_in_front(self, rob_pos, point):
+        """maybe checks the wrong way? idk"""
         vect_angle = rob_pos["angle"] + np.pi / 2
         line_distance = 0.05
         sign = lambda x: copysign(1, x)
@@ -58,6 +61,31 @@ class Controller(Node):
 
         front = sign((x2 - x1) * (point[1] - y1) - (y2 - y1) * (point[0] - x1))
         return front > 0
+    
+    def send_drive_msg(self, speed, steering_angle, jerk, acceleration, stop=False):
+        if stop:
+            msg = AckermannDriveStamped()
+            msg.drive.speed = 0.0
+            msg.drive.steering_angle = 0.0
+            msg.drive.jerk = 0.0
+            msg.drive.acceleration = 0.0
+            self.publisher_.publish(msg)
+            self.is_stopped = True
+        elif self.is_stopped:
+            msg = AckermannDriveStamped()
+            msg.drive.speed = 0.6
+            msg.drive.steering_angle = steering_angle
+            msg.drive.jerk = jerk
+            msg.drive.acceleration = acceleration
+            self.publisher_.publish(msg)
+            self.is_stopped = False
+        else:
+            msg = AckermannDriveStamped()
+            msg.drive.speed = speed
+            msg.drive.steering_angle = steering_angle
+            msg.drive.jerk = jerk
+            msg.drive.acceleration = acceleration
+            self.publisher_.publish(msg)
 
     def odom_callback(self, msg):
         self.get_logger().info("Received odom")
@@ -86,12 +114,7 @@ class Controller(Node):
             self.drive_to_midpoint(self.target, rob_pos)
             if self.check_if_point_is_in_front(rob_pos, self.target):
                 self.target = None
-                msg = AckermannDriveStamped()
-                msg.drive.speed = 0.0  # Adjust speed based on distance
-                msg.drive.steering_angle = 0.0
-                msg.drive.jerk = 0.0
-                msg.drive.acceleration = 0.0
-                self.publisher_.publish(msg)
+                self.send_drive_msg(stop=True)
         else:
             for step in range(5):
                 if self.points:
@@ -100,12 +123,7 @@ class Controller(Node):
                         self.get_logger().info("helllllllll")
                         break
                     else:
-                        msg = AckermannDriveStamped()
-                        msg.drive.speed = 0.0  # Adjust speed based on distance
-                        msg.drive.steering_angle = 0.0
-                        msg.drive.jerk = 0.0
-                        msg.drive.acceleration = 0.0
-                        self.publisher_.publish(msg)
+                        self.send_drive_msg(stop=True)
 
 
 
@@ -198,18 +216,13 @@ class Controller(Node):
         return rad 
 
     def drive_to_midpoint(self, midpoint, rob_pos):
-        msg = AckermannDriveStamped()
         angle_to_midpoint = self.normalize_angle(np.arctan2(midpoint[1] - rob_pos["y"], midpoint[0]- rob_pos["x"]) - rob_pos["angle"])
         distance_to_midpoint = self.calculate_distance(midpoint, rob_pos)
         self.get_logger().info("published middlepoint")
         speed = np.clip(distance_to_midpoint, 0.501, 0.501)
-        msg.drive.speed = speed  # Adjust speed based on distance
-        msg.drive.steering_angle = np.clip(angle_to_midpoint, -0.5, 0.5)
-        msg.drive.jerk = 0.5
-        msg.drive.acceleration = 0.5
+        steering_angle = np.clip(angle_to_midpoint, -0.5, 0.5)
+        self.send_drive_msg(speed, steering_angle, jerk=0.5, acceleration=0.5)
         self.get_logger().info(f"Driving to midpoint: {midpoint}, speed: {speed}, angle: {angle_to_midpoint}")
-
-        self.publisher_.publish(msg)
 
 
 def main(args=None):
