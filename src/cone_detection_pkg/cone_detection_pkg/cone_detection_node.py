@@ -61,7 +61,7 @@ class ConeDetectionNode(Node):
         color_image_rgb = cv2.cvtColor(color_image, cv2.COLOR_BGR2RGB)
 
         # Perform object detection
-        results = self.model.predict(color_image_rgb, save=False, show=False)
+        results = self.model.predict(color_image_rgb, save=False, show=False, device="cuda")
 
         # Initialize DetectionArray message
         detection_array = DetectionArray()
