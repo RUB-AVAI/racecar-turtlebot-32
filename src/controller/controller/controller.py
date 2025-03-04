@@ -236,7 +236,8 @@ class Controller(Node):
         return rad 
     
     def slow_increase(self, start, end, step) -> np.ndarray:
-        arr = np.arange(start, end, step)
+        num_steps = int(np.ceil((end - start) / step))
+        arr = np.linspace(start, end, num_steps)
         num = arr[self.iterator]
         if self.iterator != len(arr) - 1:
             self.iterator = self.iterator + 1
