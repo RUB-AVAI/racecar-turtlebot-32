@@ -61,7 +61,7 @@ class TestImageProcessingLink(unittest.TestCase):
 
         try:
             # Lese und konvertiere das Testbild
-            img_path = os.path.join(os.path.dirname(__file__), "ManualImage25.png")
+            img_path = os.path.join(os.path.dirname(__file__), "Image.png")
             raw_image = cv2.imread(img_path)
             self.assertIsNotNone(raw_image, "Testbild wurde nicht gefunden.")
             bridge = CvBridge()
