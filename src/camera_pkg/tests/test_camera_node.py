@@ -1,9 +1,13 @@
 import time
 import unittest
-
+import numpy as np
+import sys
+import os
 import rclpy
 from sensor_msgs.msg import Image
-from camera_node import CameraNode  # Adjust import if needed
+from cv_bridge import CvBridge
+sys.path.append(os.path.dirname(__file__)+"/../camera_pkg")
+from camera_node import CameraNode  # Adjust the import if needed
 
 class TestCameraNode(unittest.TestCase):
 
@@ -38,6 +42,9 @@ class TestCameraNode(unittest.TestCase):
             lambda msg: self.received_depth_msgs.append(msg),
             10)
 
+        # Initialize CvBridge for converting dummy images.
+        self.bridge = CvBridge()
+
     def tearDown(self):
         # Destroy nodes after each test.
         self.test_node.destroy_node()
@@ -45,13 +52,13 @@ class TestCameraNode(unittest.TestCase):
 
     def test_color_processing(self):
         """Test that a dummy color image is processed and republished."""
-        # Create a dummy Image message. In a real test, you might fill in data that
-        # cv_bridge can work with (e.g. a valid header and dummy data).
-        dummy_color = Image()
+        # Create a dummy color image using a NumPy array.
+        # For example, a 480x640 black image with 3 channels (BGR).
+        color_array = np.zeros((480, 640, 3), dtype=np.uint8)
+        dummy_color = self.bridge.cv2_to_imgmsg(color_array, encoding="bgr8")
         dummy_color.header.frame_id = "dummy_color_frame"
-        # Optionally: add fake image data here if needed.
 
-        # Directly call the callback.
+        # Call the color callback with the valid dummy image.
         self.camera_node.color_callback(dummy_color)
 
         # Allow some time for the message to be published.
@@ -65,12 +72,16 @@ class TestCameraNode(unittest.TestCase):
 
     def test_depth_processing(self):
         """Test that a dummy depth image is processed and republished."""
-        dummy_depth = Image()
+        # Create a dummy depth image using a NumPy array.
+        # For example, a 480x640 image with a single 16-bit channel.
+        depth_array = np.zeros((480, 640), dtype=np.uint16)
+        dummy_depth = self.bridge.cv2_to_imgmsg(depth_array, encoding="16UC1")
         dummy_depth.header.frame_id = "dummy_depth_frame"
-        # Optionally: add fake depth data if needed.
 
+        # Call the depth callback with the valid dummy depth image.
         self.camera_node.depth_callback(dummy_depth)
 
+        # Allow some time for the message to be published.
         end_time = time.time() + 1.0
         while time.time() < end_time and not self.received_depth_msgs:
             rclpy.spin_once(self.test_node, timeout_sec=0.1)
@@ -78,3 +89,6 @@ class TestCameraNode(unittest.TestCase):
 
         self.assertGreater(len(self.received_depth_msgs), 0,
                            "Camera node did not publish a processed depth image.")
+
+if __name__ == '__main__':
+    unittest.main()
