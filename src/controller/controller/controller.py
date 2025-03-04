@@ -34,6 +34,7 @@ class Controller(Node):
         self.toggle_autodrive = True
         self.points = None
         self.is_stopped = True
+        self.iterator = 0
 
     def reset_middlepoints_callback(self, msg):
         self.get_logger().info("Resetting middlepoints")
@@ -233,6 +234,13 @@ class Controller(Node):
         if rad < 0:
             rad += 2 * np.pi
         return rad 
+    
+    def slow_increase(self, start, end, step) -> np.ndarray:
+        arr = np.arange(start, end, step)
+        num = arr[self.iterator]
+        if self.iterator != len(arr) - 1:
+            self.iterator = self.iterator + 1
+        return num
 
     def drive_to_midpoint(self, midpoint, rob_pos):
         angle_to_midpoint = self.normalize_angle(np.arctan2(midpoint[1] - rob_pos["y"], midpoint[0]- rob_pos["x"]) - rob_pos["angle"])
