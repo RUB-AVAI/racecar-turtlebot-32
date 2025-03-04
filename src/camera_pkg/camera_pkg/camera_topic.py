@@ -9,13 +9,9 @@ class CameraTopic(Node):
 
         self.color_pub = self.create_publisher(
             Image, '/color/image_raw', qos_profile_system_default)
-        self.depth_pub = self.create_publisher(
-            Image, '/depth/image_rect_raw', qos_profile_system_default)
         
         self.color_sub = self.create_subscription(
             Image, '/camera/realsense2_camera/color/image_raw', lambda msg: self.color_pub.publish(msg), qos_profile_system_default)
-        self.depth_sub = self.create_subscription(
-            Image, '/camera/realsense2_camera/depth/image_rect_raw', lambda msg: self.depth_pub.publish(msg), qos_profile_system_default)
         
         self.get_logger().info("Camera node topic compat has been started.")
 
