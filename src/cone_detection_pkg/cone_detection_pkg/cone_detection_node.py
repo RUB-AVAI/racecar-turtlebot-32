@@ -15,7 +15,7 @@ from pathlib import Path
 class ConeDetectionNode(Node):
     def __init__(self):
         super().__init__('cone_detection_node')
-        self.model = YOLO(Path(__file__).parent / "ml_model"/"best_l.pt")
+        self.model = YOLO(Path(__file__).parent / "ml_model"/"best_50_synthetic.pt")
         self.bridge = CvBridge()
 
         # Subscribers
