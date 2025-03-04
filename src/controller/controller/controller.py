@@ -35,6 +35,8 @@ class Controller(Node):
         self.points = None
         self.is_stopped = True
         self.iterator = 0
+        self.steps = None
+
 
     def reset_middlepoints_callback(self, msg):
         self.get_logger().info("Resetting middlepoints")
@@ -236,8 +238,9 @@ class Controller(Node):
         return rad 
     
     def slow_increase(self, start, end, step) -> np.ndarray:
-        num_steps = int(np.ceil((end - start) / step))
-        arr = np.linspace(start, end, num_steps)
+        if self.step == None:
+            self.step = int(np.ceil((end - start) / step))
+        arr = np.linspace(start, end, self.step)
         num = arr[self.iterator]
         if self.iterator != len(arr) - 1:
             self.iterator = self.iterator + 1
