@@ -71,6 +71,15 @@ class TestCameraNode(unittest.TestCase):
         self.assertGreater(len(self.received_detections_msgs), 0,
                            " node did not publish a processed color image.")
         print(self.received_detections_msgs)
+        output_txt_path = os.path.join(os.path.dirname(__file__), "Dections.txt")
+        with open(output_txt_path, 'w') as file:
+        # Iterate over each item in the list and write to the file
+            if not self.received_detections_msgs:
+                file.write("The list is empty.\n")
+            else:
+                for index, item in enumerate(self.received_detections_msgs, 1):
+                    file.write(f"{item}\n")
+
         for i in self.received_detection_images_msgs:
             save_image = self.bridge.imgmsg_to_cv2(color_msg, desired_encoding='rgb8')
             output_path = os.path.join(os.path.dirname(__file__), "Image_output.png")
