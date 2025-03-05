@@ -41,7 +41,7 @@ class ConeDetectionNode(Node):
         self.get_logger().info(f"Toggle camera: {msg.data}")
         self.toggle_camera = msg.data
 
-    def image_callback(self, color_msg):
+    def image_callback(self, color_msg, working_device=0):
         try:
             # Convert ROS images to OpenCV format
             color_image = self.bridge.imgmsg_to_cv2(color_msg, desired_encoding='bgr8')
@@ -53,7 +53,7 @@ class ConeDetectionNode(Node):
         color_image = cv2.resize(color_image, (640, 480))
 
         # Perform object detection
-        results = self.model.predict(color_image_rgb, save=False, show=False, device=0)
+        results = self.model.predict(color_image_rgb, save=False, show=False, device=working_device)
 
         # Initialize DetectionArray message
         detection_array = DetectionArray()

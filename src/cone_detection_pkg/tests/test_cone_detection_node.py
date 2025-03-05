@@ -61,7 +61,7 @@ class TestCameraNode(unittest.TestCase):
         color_image = cv2.imread(img_path)
         color_image = cv2.cvtColor(color_image, cv2.COLOR_RGB2BGR)
         color_msg = self.bridge.cv2_to_imgmsg(color_image, encoding='bgr8')
-        self.cone_detection_node.image_callback(color_msg)
+        self.cone_detection_node.image_callback(color_msg, working_device="CPU")
 
         end_time = time.time() + 1.0
         while time.time() < end_time and not self.received_detections_msgs:
