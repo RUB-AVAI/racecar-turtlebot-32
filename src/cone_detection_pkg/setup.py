@@ -5,7 +5,7 @@ package_name = 'cone_detection_pkg'
 setup(
     name=package_name,
     version='0.0.0',
-    packages=find_packages(exclude=['test']),
+    packages=[package_name],
     data_files=[
         ('share/ament_index/resource_index/packages',
             ['resource/' + package_name]),
@@ -17,6 +17,9 @@ setup(
         #("lib/python3.10/site-packages/"+package_name+"/ml_model", [package_name+"/ml_model/best_m.pt"]),
     ],
     install_requires=['setuptools'],
+    extras_require={
+        'test': ['pytest'],
+    },
     zip_safe=True,
     maintainer='robin',
     maintainer_email='robin@todo.todo',

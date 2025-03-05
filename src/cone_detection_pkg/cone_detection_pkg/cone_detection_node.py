@@ -77,50 +77,50 @@ class ConeDetectionNode(Node):
                 if box_width < self.min_width or box_height < self.min_height or box_width > self.max_width or box_height > self.max_height:
                     continue
 
-                colors=[(255,0,0), (0,209,134), (0,255,255)]
+                # colors=[(255,0,0), (0,209,134), (0,255,255)]
 
                 # Draw bounding box
-                cv2.rectangle(color_image_rgb, (int(x1), int(y1)), (int(x2), int(y2)), colors[int(label)], 2)
+                # cv2.rectangle(color_image_rgb, (int(x1), int(y1)), (int(x2), int(y2)), colors[int(label)], 2)
 
                 # Calculate center of bounding box
-                x_center = int((x1 + x2) / 2)
-                y_center = int((y1 + y2) / 2)
+                # x_center = int((x1 + x2) / 2)
+                # y_center = int((y1 + y2) / 2)
 
                 z_in_meters = 0  # If depth values are in millimeters
                 z_text = "dont care"
 
                 # Draw center point on the image
-                cv2.circle(color_image_rgb, (x_center, y_center), radius=5, color=(0, 255, 0), thickness=-1)
+                # cv2.circle(color_image_rgb, (x_center, y_center), radius=5, color=(0, 255, 0), thickness=-1)
 
                 # Add depth value to the image
-                cv2.putText(
-                    color_image_rgb,
-                    z_text,
-                    (x_center + 10, y_center),
-                    cv2.FONT_HERSHEY_SIMPLEX,
-                    0.5,
-                    colors[int(label)],
-                    2,
-                )
+                # cv2.putText(
+                #     color_image_rgb,
+                #     z_text,
+                #     (x_center + 10, y_center),
+                #     cv2.FONT_HERSHEY_SIMPLEX,
+                #     0.5,
+                #     colors[int(label)],
+                #     2,
+                # )
 
-                # Add label and confidence score
-                cv2.putText(
-                    color_image_rgb,
-                    f"Class {int(label)}: {conf:.2f}",
-                    (int(x1), int(y1) - 10),
-                    cv2.FONT_HERSHEY_SIMPLEX,
-                    0.5,
-                    colors[int(label)],
-                    2,
-                )
+                # # Add label and confidence score
+                # cv2.putText(
+                #     color_image_rgb,
+                #     f"Class {int(label)}: {conf:.2f}",
+                #     (int(x1), int(y1) - 10),
+                #     cv2.FONT_HERSHEY_SIMPLEX,
+                #     0.5,
+                #     colors[int(label)],
+                #     2,
+                # )
 
                 # Create Detection message
                 detection = Detection()
-                detection.z_in_meters = float(z_in_meters)
-                detection.angle = float(self.get_angle(x_center))
+                # detection.z_in_meters = float(z_in_meters)
+                # detection.angle = float(self.get_angle(x_center))
                 detection.label = int(label)
 
-                self.get_logger().info(f"Detection: classID={detection.label}, angle={detection.angle}, distance={detection.z_in_meters}, x_center={x_center}, y_center={y_center}")
+                # self.get_logger().info(f"Detection: classID={detection.label}, angle={detection.angle}, distance={detection.z_in_meters}, x_center={x_center}, y_center={y_center}")
 
                 # Append detection to DetectionArray
                 detection_array.detections.append(detection)
@@ -143,7 +143,7 @@ class ConeDetectionNode(Node):
             self.publisher_detections_images.publish(annotated_image_msg)
 
         # Save the annotated image
-        timestamp = color_msg.header.stamp.sec  # Use ROS message timestamp
+        # timestamp = color_msg.header.stamp.sec  # Use ROS message timestamp
         #output_path = f"/workspace/src/cone_detection_pkg/cone_detection_pkg/image/detections_{time.time}.png"  # Change the path as needed
         #self.publisher_detections_images.publish(save_image)
         #cv2.imwrite(output_path, save_image)
