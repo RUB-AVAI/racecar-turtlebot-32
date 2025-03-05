@@ -15,11 +15,12 @@ class CameraNode(Node):
         # Abonniere Kamera-Topics, um an Bilder und Tiefenwerte der Kamera zu kommen
         # '/camera/realsense2_camera/color/image_raw'
         self.color_sub = self.create_subscription(
-            Image, '/color/image_raw', self.color_callback, 60)
-        # '/camera/realsense2_camera/depth/image_rect_raw'
+            Image, '/color/image_raw', self.color_callback, qos_profile_system_default)
+
         # Publishe Bilder und Tiefenwerte für Distanzerkennung
         self.color_pub = self.create_publisher(
-            CompressedImage, '/camera/color/image_raw', 60)
+            Image, '/camera/color/image_raw', qos_profile_system_default)
+        
         self.get_logger().info("Camera node has been started.")
 
     def color_callback(self, msg):  
