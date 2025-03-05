@@ -18,7 +18,9 @@ setup(
     maintainer_email='robin@todo.todo',
     description='TODO: Package description',
     license='TODO: License declaration',
-    tests_require=['pytest'],
+    extras_require={
+        'test': ['pytest'],
+    },
     entry_points={
         'console_scripts': [
             "occupancy_node = occupancy_map_pkg.occupancy_node:main"
