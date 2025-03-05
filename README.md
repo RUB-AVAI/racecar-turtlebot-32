@@ -34,6 +34,8 @@ sudo apt install x11-apps -y
 
 # install torch CPU
 pip3 install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cpu
+https://forums.developer.nvidia.com/t/pytorch-for-jetson/72048
+and onnxruntime-gpu
 ```
 
 # Colcon build and install

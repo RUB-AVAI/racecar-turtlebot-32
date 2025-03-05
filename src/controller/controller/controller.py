@@ -12,6 +12,7 @@ import math
 import numpy as np
 from nav_msgs.msg import Odometry
 from .tf_transform import euler_from_quaternion
+#import time
 
 class Controller(Node):
     def __init__(self):
@@ -34,6 +35,11 @@ class Controller(Node):
         self.toggle_autodrive = True
         self.points = None
         self.is_stopped = True
+        self.first_message = True
+        self.iterator = 0
+        self.step = None
+        self.last_class = None
+        #self.last_processed_time = 0
 
     def reset_middlepoints_callback(self, msg):
         self.get_logger().info("Resetting middlepoints")
@@ -62,7 +68,7 @@ class Controller(Node):
         front = sign((x2 - x1) * (point[1] - y1) - (y2 - y1) * (point[0] - x1))
         return front > 0
     
-    def send_drive_msg(self, speed, steering_angle, jerk, acceleration, stop=False):
+    def send_drive_msg(self, speed = 0.0, steering_angle = 0.0, jerk = 0.0, acceleration= 0.0, stop=False):
         """steering range might be [-0.24,0.24] or [-0.5,0.5]"""
         if stop:
             msg = AckermannDriveStamped()
@@ -72,9 +78,10 @@ class Controller(Node):
             msg.drive.acceleration = 0.0
             self.publisher_.publish(msg)
             self.is_stopped = True
+            self.get_logger().info("STOPPPED")
         elif self.is_stopped:
             msg = AckermannDriveStamped()
-            msg.drive.speed = 0.6
+            msg.drive.speed = 0.25
             msg.drive.steering_angle = steering_angle
             msg.drive.jerk = jerk
             msg.drive.acceleration = acceleration
@@ -89,15 +96,21 @@ class Controller(Node):
             self.publisher_.publish(msg)
 
     def odom_callback(self, msg):
+        """current_time = time.time()
+        if current_time - self.last_processed_time < 0.5:
+            self.get_logger().info(f"{current_time}")
+            return
+        
+        self.last_processed_time = current_time"""
         self.get_logger().info("Received odom")
         position = msg.pose.pose.position
         orientation = msg.pose.pose.orientation
 
         r, p, y = euler_from_quaternion([float(orientation.x), float(orientation.y), float(orientation.z), float(orientation.w)])
 
-        turtle_pos_x = -float(position.x)
+        turtle_pos_x = float(position.x)
         turtle_pos_y = float(position.y)
-        turtle_angle = -y
+        turtle_angle = y
         rob_pos = {
             "x": turtle_pos_x,
             "y": turtle_pos_y,
@@ -112,21 +125,30 @@ class Controller(Node):
             if distance_to_last_target < 0.25:
                 self.last_target = self.target
                 self.target = None"""
-            self.drive_to_midpoint(self.target, rob_pos)
+            speed = 0.44
+            self.drive_to_midpoint(self.target, rob_pos,speed)
             if self.check_if_point_is_in_front(rob_pos, self.target):
                 self.target = None
-                self.send_drive_msg(stop=True)
+                #self.send_drive_msg(stop=True)
         else:
             for step in range(5):
                 if self.points:
-                    self.find_nearest_points(self.points, rob_pos, step)
+                    no_cones = self.find_nearest_points(self.points, rob_pos, step)
                     if self.target is not None:
                         self.get_logger().info("found target")
                         break
-                    else:
-                        self.send_drive_msg(stop=True)
+                    """elif no_cones:
+                        self.get_logger().info("after findnearest no cones")
+                        self.send_drive_msg(stop=True)"""
 
-
+    def slow_increase(self, start, end, step) -> np.ndarray:
+        if self.step == None:
+            self.step = int(np.ceil(abs(end - start) / step))
+        arr = np.linspace(start, end, self.step)
+        num = arr[self.iterator]
+        if self.iterator != len(arr) - 1:
+            self.iterator = self.iterator + 1
+        return num
 
     def occupancy_callback(self, msg):
         #if self.subscription_toggle_autodrive:
@@ -135,7 +157,7 @@ class Controller(Node):
         self.points = msg.classedpoints
 
     def find_nearest_points(self, points, rob_pos, line_step):
-        distance_threshold = 4
+        distance_threshold = 8
         sign = lambda x: copysign(1, x)
         # get front points
         yellow = []
@@ -147,11 +169,12 @@ class Controller(Node):
         line_distance = 0.05
         x1 = cos(rob_pos["angle"]) * line_distance*line_step + rob_pos["x"]
         y1 = sin(rob_pos["angle"]) * line_distance*line_step + rob_pos["y"]
-        x2 = cos(vect_angle) * 2 + x1#rob_pos["x"]
-        y2 = sin(vect_angle) * 2 + y1#rob_pos["y"]
+        x2 = cos(vect_angle) * 2 + rob_pos["x"]
+        y2 = sin(vect_angle) * 2 + rob_pos["y"]
         for point in points:
-            # check if point is "left" or "right" of vector
+            # check if point.inf() is "left" or "right" of vector
             front = sign((x2 - x1) * (point.y - y1) - (y2 - y1) * (point.x - x1))
+            self.get_logger().info(f"{front}")
             if front < 0:
                 distance = sqrt((point.x - rob_pos["x"]) ** 2 + (point.y - rob_pos["y"]) ** 2)
                 if distance <= distance_threshold:
@@ -160,18 +183,7 @@ class Controller(Node):
                         blue.append([point, distance])
                     if point.c == 0:
                         yellow.append([point, distance])
-        """if len(yellow) == 0:
-            self.get_logger().info("no yellow cones")
-            #NEED TO SEARCH HERE
-            #self.twist.publish(Twist())
-            #self.search(1)  # turn slowly
-
-        elif len(blue) == 0:
-            self.get_logger().info("no blue cones")
-            #NEED TO SEARCH HERE
-            #self.twist.publish(Twist())
-            #self.search(0)  # turn slowly in the other direction
-            # return"""
+        self.get_logger().info(f"{yellow}")
         if len(yellow) > 0 and len(blue) > 0:
             yellow.sort(key=lambda x: x[1])
             blue.sort(key=lambda x: x[1])
@@ -196,24 +208,41 @@ class Controller(Node):
 
             if self.target == None:
                 self.target = middle_point
+            self.last_class=None
+            return False
         elif len(yellow) == 0 and len(blue) == 0:
-            self.send_drive_msg(stop=True)
+            #self.send_drive_msg(stop=True)
+            self.get_logger().info("No cones")
+            if self.last_class == 0:
+                self.send_drive_msg(stop=True)
+            elif self.last_class == 2:
+                self.send_drive_msg(stop=True)
+            else:
+                self.send_drive_msg(stop=True)
+    
+            return True
         elif len(yellow) > 0:
+            self.last_class = 0
+            self.get_logger().info("only yellow")
             yellow.sort(key=lambda x: x[1])
             nearest_distance = yellow[0][1]
             if nearest_distance < 1:
-                steering = -0.5
+                steering = 0.5
             else:
-                steering = -0.1
-            self.send_drive_msg(0.5,steering, 0.5, 0.5)
+                steering = 0.5
+            self.send_drive_msg(0.44,steering, 2.0, 2.0)
+            return False
         else: # blue > 0
+            self.last_class = 2
+            self.get_logger().info("only blue")
             blue.sort(key=lambda x: x[1])
             nearest_distance = blue[0][1]
             if nearest_distance < 1:
-                steering = 0.5
+                steering = -0.5
             else:
-                steering = 0.1
-            self.send_drive_msg(0.5,steering, 0.5, 0.5)
+                steering = -0.5
+            self.send_drive_msg(0.44,steering, 2.0, 2.0)
+            return False
 
     def calculate_distance(self, midpoint, rob_pos):
         return math.sqrt((midpoint[0] - rob_pos["x"]) ** 2 + (midpoint[1] - rob_pos["y"]) ** 2)
@@ -234,14 +263,14 @@ class Controller(Node):
             rad += 2 * np.pi
         return rad 
 
-    def drive_to_midpoint(self, midpoint, rob_pos):
-        angle_to_midpoint = self.normalize_angle(np.arctan2(midpoint[1] - rob_pos["y"], midpoint[0]- rob_pos["x"]) - rob_pos["angle"])
+    def drive_to_midpoint(self, midpoint, rob_pos, speed):
+        angle_to_midpoint = np.arctan2(midpoint[1] - rob_pos["y"], midpoint[0]- rob_pos["x"]) - rob_pos["angle"]
         distance_to_midpoint = self.calculate_distance(midpoint, rob_pos)
         self.get_logger().info("published middlepoint")
-        speed = np.clip(distance_to_midpoint, 0.501, 0.501)
+        speed_new = speed #np.clip(distance_to_midpoint, 0.501, 0.501)
         steering_angle = np.clip(angle_to_midpoint, -0.5, 0.5)
-        self.send_drive_msg(speed, steering_angle, jerk=0.5, acceleration=0.5)
-        self.get_logger().info(f"Driving to midpoint: {midpoint}, speed: {speed}, angle: {angle_to_midpoint}")
+        self.send_drive_msg(speed_new, angle_to_midpoint, jerk=0.0, acceleration=0.0)
+        self.get_logger().info(f"Driving to midpoint: {midpoint}, speed: {speed_new}, angle: {angle_to_midpoint}")
 
 
 def main(args=None):

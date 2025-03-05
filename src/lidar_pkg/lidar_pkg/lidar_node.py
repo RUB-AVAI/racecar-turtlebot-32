@@ -48,7 +48,8 @@ class LidarFusion(Node):
         keepclusters = []
         for cluster in clusters:
             # filter out clusters that are too far away
-            if cluster[0] <= 2:
+            self.get_logger().info(f"{cluster[0]}")
+            if cluster[0] <= 4:
                 keepclusters.append(cluster)
         clusters = np.array(keepclusters)
         if len(clusters) <= 0:
@@ -69,7 +70,7 @@ class LidarFusion(Node):
                 # If the cluster angle is close enough to the detection angle, fuse the data.
                 #self.get_logger().info(f"Possible box: {possible_box}, Detection angle: {detection.angle}, cluster_center: {cluster_center}")
                 #self.get_logger().info(f"{possible_box} {detection.angle}")
-                if abs(possible_box - detection.angle) < 3:
+                if abs(possible_box - detection.angle) < 4:
                     # If multiple clusters match, you might choose the one with the lower distance.
                     # currently we don't? Hopefully filter that out by distances already
                     fused.append((possible_box, dist, detection.label))

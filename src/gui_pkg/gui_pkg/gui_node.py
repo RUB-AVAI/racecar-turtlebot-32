@@ -353,6 +353,8 @@ class MainWindow(QMainWindow):
             self.gui_node.turtle = None
             self.gui_node.middlepoints = None
             # Visualize the lidar points
+            if not self.gui_node.lidarpoints:
+                return
             for point in self.gui_node.lidarpoints:
                 x.append(point.angle)
                 y.append(point.z_in_meters)
