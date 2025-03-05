@@ -40,6 +40,7 @@ class Controller(Node):
         self.step = None
         self.last_class = None
         #self.last_processed_time = 0
+        self.steering_explore = 0
 
     def reset_middlepoints_callback(self, msg):
         self.get_logger().info("Resetting middlepoints")
@@ -58,10 +59,11 @@ class Controller(Node):
     def check_if_point_is_in_front(self, rob_pos, point):
         """maybe checks the wrong way? idk"""
         vect_angle = rob_pos["angle"] + np.pi / 2
-        line_distance = 0.05
+        line_distance = 0.25
         sign = lambda x: copysign(1, x)
-        x1 = rob_pos["x"]
-        y1 = rob_pos["y"]
+
+        x1 = cos(rob_pos["angle"]) * line_distance + rob_pos["x"]
+        y1 = sin(rob_pos["angle"]) * line_distance + rob_pos["y"]
         x2 = cos(vect_angle) * 2 + rob_pos["x"]
         y2 = sin(vect_angle) * 2 + rob_pos["y"]
 
@@ -157,7 +159,7 @@ class Controller(Node):
         self.points = msg.classedpoints
 
     def find_nearest_points(self, points, rob_pos, line_step):
-        distance_threshold = 8
+        distance_threshold = 6
         sign = lambda x: copysign(1, x)
         # get front points
         yellow = []
@@ -166,7 +168,7 @@ class Controller(Node):
         # vector goes from bot position to a point (x2,y2) in the direction of the vector
         vect_angle = rob_pos["angle"] + np.pi / 2
 
-        line_distance = 0.05
+        line_distance = 0.1
         x1 = cos(rob_pos["angle"]) * line_distance*line_step + rob_pos["x"]
         y1 = sin(rob_pos["angle"]) * line_distance*line_step + rob_pos["y"]
         x2 = cos(vect_angle) * 2 + rob_pos["x"]
@@ -213,35 +215,35 @@ class Controller(Node):
         elif len(yellow) == 0 and len(blue) == 0:
             #self.send_drive_msg(stop=True)
             self.get_logger().info("No cones")
-            if self.last_class == 0:
-                self.send_drive_msg(stop=True)
-            elif self.last_class == 2:
-                self.send_drive_msg(stop=True)
-            else:
-                self.send_drive_msg(stop=True)
-    
+            self.send_drive_msg(stop=True)
+
+            self.last_class=None
             return True
         elif len(yellow) > 0:
-            self.last_class = 0
+            messages_until_full_steering = 100
+            if self.last_class != 0:
+                self.steering_explore = 0
+                self.last_class = 0
             self.get_logger().info("only yellow")
-            yellow.sort(key=lambda x: x[1])
+            """yellow.sort(key=lambda x: x[1])
             nearest_distance = yellow[0][1]
             if nearest_distance < 1:
-                steering = 0.5
-            else:
-                steering = 0.5
-            self.send_drive_msg(0.44,steering, 2.0, 2.0)
+                self.steering_explore = -0.5"""
+            self.steering_explore += 0.25/messages_until_full_steering
+            self.send_drive_msg(0.44,self.steering_explore, 2.0, 2.0)
             return False
         else: # blue > 0
-            self.last_class = 2
+            messages_until_full_steering = 100
+            if self.last_class != 2:
+                self.steering_explore = 0
+                self.last_class = 2
             self.get_logger().info("only blue")
-            blue.sort(key=lambda x: x[1])
+            """ blue.sort(key=lambda x: x[1])
             nearest_distance = blue[0][1]
             if nearest_distance < 1:
-                steering = -0.5
-            else:
-                steering = -0.5
-            self.send_drive_msg(0.44,steering, 2.0, 2.0)
+                self.steering_explore = -0.5"""
+            self.steering_explore -= 0.25/messages_until_full_steering
+            self.send_drive_msg(0.44,self.steering_explore, 2.0, 2.0)
             return False
 
     def calculate_distance(self, midpoint, rob_pos):

@@ -75,8 +75,7 @@ class OccupancyNode(Node):
             return
 
         for detection in msg.detectionarray.detections:
-            #self.get_logger().info(f'hello {detection.z_in_meters}')
-            if detection.z_in_meters > 1.5 or detection.z_in_meters < 0:
+            if detection.z_in_meters > 2.55 or detection.z_in_meters < 0:
                 continue
             classID = detection.label
             turtle_angle = self.turtle_angle
@@ -84,14 +83,14 @@ class OccupancyNode(Node):
             angle = -np.deg2rad(detection.angle) + self.turtle_angle
             #self.get_logger().info(f"{turtle_angle}")
             distance = detection.z_in_meters
-            self.get_logger().info(f"{detection.angle}")
-            self.get_logger().info(f"normal Detection: classID={classID}, angle={angle}, turtle_angle={turtle_angle}, distance={distance}")
+            #self.get_logger().info(f"{detection.angle}")
+            #self.get_logger().info(f"normal Detection: classID={classID}, angle={angle}, turtle_angle={turtle_angle}, distance={distance}")
 
-            if classID == 0 and detection.angle < 0:
-                self.get_logger().info(f"yellow Detection: classID={classID}, angle={angle}, turtle_angle={turtle_angle}, distance={distance}")
+            if classID == 0 and detection.angle < 10:
+                self.get_logger().info(f"yellow Detection: classID={classID}, angle={detection.angle}, turtle_angle={turtle_angle}, distance={distance}")
                 continue
 
-            if classID == 2 and  detection.angle > 0:
+            if classID == 2 and  detection.angle > -10:
                 self.get_logger().info(f"blue Detection: classID={classID}, angle={angle}, turtle_angle={turtle_angle}, distance={distance}")
                 continue
 
@@ -106,7 +105,7 @@ class OccupancyNode(Node):
     def update_map(self):
         points = self.map
         #self.get_logger().info(f"{len(self.map)} points before DBSCAN")
-        dbscan = DBSCAN(eps=0.35, min_samples=2)
+        dbscan = DBSCAN(eps=0.2, min_samples=2)
         if not points:
             return
         labels = dbscan.fit_predict(points)

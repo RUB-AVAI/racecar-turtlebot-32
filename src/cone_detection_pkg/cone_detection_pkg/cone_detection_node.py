@@ -49,8 +49,8 @@ class ConeDetectionNode(Node):
             self.get_logger().error('Failed to convert images: %s' % str(e))
             return
 
-        color_image_rgb = cv2.cvtColor(color_image, cv2.COLOR_BGR2RGB)
         color_image = cv2.resize(color_image, (640, 480))
+        color_image_rgb = cv2.cvtColor(color_image, cv2.COLOR_BGR2RGB)
 
         # Perform object detection
         results = self.model.predict(color_image_rgb, save=False, show=False, device=0)
@@ -78,14 +78,14 @@ class ConeDetectionNode(Node):
                 if box_width < self.min_width or box_height < self.min_height or box_width > self.max_width or box_height > self.max_height:
                     continue
 
-                # colors=[(255,0,0), (0,209,134), (0,255,255)]
+                colors=[(255,0,0), (0,209,134), (0,255,255)]
 
                 # Draw bounding box
-                # cv2.rectangle(color_image_rgb, (int(x1), int(y1)), (int(x2), int(y2)), colors[int(label)], 2)
+                cv2.rectangle(color_image_rgb, (int(x1), int(y1)), (int(x2), int(y2)), colors[int(label)], 2)
 
                 # Calculate center of bounding box
-                # x_center = int((x1 + x2) / 2)
-                # y_center = int((y1 + y2) / 2)
+                x_center = int((x1 + x2) / 2)
+                y_center = int((y1 + y2) / 2)
 
                 z_in_meters = 0  # If depth values are in millimeters
                 z_text = "dont care"
@@ -117,8 +117,8 @@ class ConeDetectionNode(Node):
 
                 # Create Detection message
                 detection = Detection()
-                # detection.z_in_meters = float(z_in_meters)
-                # detection.angle = float(self.get_angle(x_center))
+                detection.z_in_meters = float(z_in_meters)
+                detection.angle = float(self.get_angle(x_center))
                 detection.label = int(label)
 
                 # self.get_logger().info(f"Detection: classID={detection.label}, angle={detection.angle}, distance={detection.z_in_meters}, x_center={x_center}, y_center={y_center}")
