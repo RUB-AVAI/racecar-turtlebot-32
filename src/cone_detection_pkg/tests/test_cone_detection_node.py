@@ -10,32 +10,18 @@ import launch_testing.actions
 import pytest
 import rclpy
 import cv2
+from avai_messages.msg import Detection, DetectionArray, DetectionArrayStamped
 from cv_bridge import CvBridge
 from std_msgs.msg import Float64
+sys.path.append(os.path.dirname(__file__)+"/../camera_pkg")
+from cone_detection_node import ConeDetectionNode
 from sensor_msgs.msg import Image, CompressedImage
 
-# Launch feature node
-@pytest.mark.rostest
-def generate_test_description():
-    file_path = os.path.dirname(__file__)
-    image_processing_node = launch_ros.actions.Node(
-        executable=sys.executable,
-        arguments=[os.path.join(file_path, "..", "camera_pkg", "image_processing_node.py")],
-        additional_env={'PYTHONUNBUFFERED': '1'},
-        parameters=[{}]
-    )
-    return (
-        launch.LaunchDescription([
-            image_processing_node,
-            launch_testing.actions.ReadyToTest(),
-        ]),
-        {"image_processing": image_processing_node}
-    )
-
-class TestImageProcessingLink(unittest.TestCase):
+class TestCameraNode(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
+        # Initialize rclpy once for all tests.
         rclpy.init()
 
     @classmethod
@@ -43,44 +29,48 @@ class TestImageProcessingLink(unittest.TestCase):
         rclpy.shutdown()
 
     def setUp(self):
-        self.node = rclpy.create_node("test_image_processing_node")
+        # Create a test node to subscribe to the outputs.
+        self.test_node = rclpy.create_node("test_cone_detection_node")
+        self.cone_detection_node = ConeDetectionNode()
+
+        self.received_detections_msgs = []
+        self.received_detection_images_msgs = []
+
+        self.detection_sub = self.node.create_subscription(
+            DetectionArrayStamped,
+            "detections",
+            lambda msg: self.received_detections_msgs.append(msg),
+            10)
+
+        self.detection_images_sub = self.node.create_subscription(
+            Image,
+            "detections/images",
+            lambda msg: self.received_detection_images_msgs.append(msg),
+            10)
+
+        self.bridge = CvBridge()
 
     def tearDown(self):
-        self.node.destroy_node()
+        # Destroy nodes after each test.
+        self.test_node.destroy_node()
+        self.cone_detection_node.destroy_node()
 
-    def test_image_processing_transmits(self, image_processing, proc_output):
-        msgs_rx = []
+    def test_image_callback(self):
+        # Lese und konvertiere das Testbild
+        img_path = os.path.join(os.path.dirname(__file__), "Image.png")
+        color_image = cv2.imread(img_path)
+        color_msg = self.bridge.cv2_to_imgmsg(color_image, encoding='bgr8')
+        self.cone_detection_node.image_callback(color_msg)
 
-        pub = self.node.create_publisher(Image, "raw_image", 10)
-        sub = self.node.create_subscription(
-            CompressedImage,
-            "processed_image",
-            lambda msg: msgs_rx.append(msg),
-            10
-        )
+        end_time = time.time() + 1.0
+        while time.time() < end_time and not self.received_detections_msgs:
+            rclpy.spin_once(self.test_node, timeout_sec=0.1)
+            rclpy.spin_once(self.cone_detection_node, timeout_sec=0.1)
 
-        try:
-            # Lese und konvertiere das Testbild
-            raw_image = cv2.imread("/home/ubuntu/allassignmens-35/src/camera_pkg/test/ManualImage25.png")
-            self.assertIsNotNone(raw_image, "Testbild wurde nicht gefunden.")
-            bridge = CvBridge()
-            img_msg = bridge.cv2_to_imgmsg(raw_image)
+        self.assertGreater(len(self.received_detections_msgs), 0,
+                           " node did not publish a processed color image.")
+        print(self.received_detections_msgs)
 
-            # Kurze Wartezeit, damit alle Nodes bereit sind
-            time.sleep(2)
-            pub.publish(img_msg)
-
-            # Warte bis zu 10 Sekunden, bis eine verarbeitete Nachricht empfangen wird
-            end_time = time.time() + 10
-            while time.time() < end_time and not msgs_rx:
-                rclpy.spin_once(self.node, timeout_sec=0.1)
-
-            # Sicherstellen, dass mindestens eine verarbeitete Nachricht empfangen wurde
-            self.assertGreaterEqual(len(msgs_rx), 1, "Es wurde keine verarbeitete Nachricht empfangen.")
-
-            # Optionale Prüfung: Umwandlung der komprimierten Nachricht in ein OpenCV-Bild
-            processed_cv_img = bridge.compressed_imgmsg_to_cv2(msgs_rx[0])
-            self.assertIsNotNone(processed_cv_img, "Die Umwandlung der verarbeiteten Nachricht in ein OpenCV-Bild schlug fehl.")
-        finally:
-            self.node.destroy_subscription(sub)
-            self.node.destroy_publisher(pub)
+        
+if __name__ == '__main__':
+    unittest.main()
