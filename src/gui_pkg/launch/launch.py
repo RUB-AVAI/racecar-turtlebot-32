@@ -31,8 +31,8 @@ def generate_launch_description():
         executable="lidar_node"
     )
 
-    ld.add_action(camera_topic)
-    ld.add_action(camera)
+    #ld.add_action(camera_topic)
+    #ld.add_action(camera)
     ld.add_action(cone_detection)
     ld.add_action(lidar)
     ld.add_action(occupancy_map)
