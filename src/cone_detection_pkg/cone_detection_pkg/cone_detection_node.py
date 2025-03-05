@@ -19,7 +19,7 @@ class ConeDetectionNode(Node):
         self.bridge = CvBridge()
 
         # Subscribers
-        self.color_sub = self.create_subscription(CompressedImage, '/camera/color/image_raw', self.image_callback, 10)
+        self.color_sub2 = self.create_subscription(Image, '/camera/realsense2_camera/color/image_raw', self.image_callback, 60)
         # thresholds for box
         self.min_width = 25
         self.min_height = 25
@@ -44,12 +44,13 @@ class ConeDetectionNode(Node):
     def image_callback(self, color_msg):
         try:
             # Convert ROS images to OpenCV format
-            color_image = self.bridge.compressed_imgmsg_to_cv2(color_msg, desired_encoding='bgr8')
+            color_image = self.bridge.imgmsg_to_cv2(color_msg, desired_encoding='bgr8')
         except Exception as e:
             self.get_logger().error('Failed to convert images: %s' % str(e))
             return
 
         color_image_rgb = cv2.cvtColor(color_image, cv2.COLOR_BGR2RGB)
+        color_image = cv2.resize(color_image, (640, 480))
 
         # Perform object detection
         results = self.model.predict(color_image_rgb, save=False, show=False, device=0)
@@ -135,7 +136,7 @@ class ConeDetectionNode(Node):
 
         # Convert RGB image back to BGR for saving
         save_image = color_image_rgb#cv2.cvtColor(color_image_rgb, cv2.COLOR_RGB2BGR)
-        save_image = cv2.resize(save_image, (640, 480))
+        #save_image = cv2.resize(save_image, (640, 480))
         # Convert the annotated image to a ROS Image message
         annotated_image_msg = self.bridge.cv2_to_imgmsg(save_image, encoding='rgb8')
         annotated_image_msg.header = color_msg.header
