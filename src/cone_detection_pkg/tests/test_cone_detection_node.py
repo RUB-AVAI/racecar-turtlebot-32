@@ -63,12 +63,14 @@ class TestCameraNode(unittest.TestCase):
         self.cone_detection_node.image_callback(color_msg)
 
         end_time = time.time() + 1.0
-        while time.time() < end_time and not self.received_color_msgs:
+        while time.time() < end_time and not self.received_detections_msgs:
             rclpy.spin_once(self.test_node, timeout_sec=0.1)
             rclpy.spin_once(self.cone_detection_node, timeout_sec=0.1)
 
-        self.assertGreater(len(self.received_color_msgs), 0,
+        self.assertGreater(len(self.received_detections_msgs), 0,
                            " node did not publish a processed color image.")
+        print(self.received_detections_msgs)
+
         
 if __name__ == '__main__':
     unittest.main()
