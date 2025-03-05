@@ -25,7 +25,6 @@ setup(
     maintainer_email='robin@todo.todo',
     description='TODO: Package description',
     license='TODO: License declaration',
-    tests_require=['pytest'],
     entry_points={
         'console_scripts': [
             'cone_detection_node = cone_detection_pkg.cone_detection_node:main',

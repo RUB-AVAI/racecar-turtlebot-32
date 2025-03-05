@@ -1,0 +1,1 @@
+avai_messages.msg.DetectionArrayStamped(header=std_msgs.msg.Header(stamp=builtin_interfaces.msg.Time(sec=0, nanosec=0), frame_id=''), detectionarray=avai_messages.msg.DetectionArray(detections=[avai_messages.msg.Detection(z_in_meters=0.0, angle=0.0, label=2), avai_messages.msg.Detection(z_in_meters=0.0, angle=0.0, label=1)]))
