@@ -49,11 +49,10 @@ class ConeDetectionNode(Node):
         self.get_logger().info(f"Toggle camera: {msg.data}")
         self.toggle_camera = msg.data
 
-    def image_callback(self, color_msg, depth_msg):
+    def image_callback(self, color_msg):
         try:
             # Convert ROS images to OpenCV format
             color_image = self.bridge.imgmsg_to_cv2(color_msg, desired_encoding='bgr8')
-            depth_image = self.bridge.imgmsg_to_cv2(depth_msg, desired_encoding='16UC1')
         except Exception as e:
             self.get_logger().error('Failed to convert images: %s' % str(e))
             return
@@ -82,7 +81,7 @@ class ConeDetectionNode(Node):
                 box_height = y2 - y1
 
                 # filter out bounding boxes
-                #if box_width < self.min_width or box_height < self.min_height or box_width > self.max_width or box_height > self.max_height:
+                # if box_width < self.min_width or box_height < self.min_height or box_width > self.max_width or box_height > self.max_height:
                 #    continue
 
                 # colors=[(255,0,0), (0,209,134), (0,255,255)]
@@ -95,10 +94,9 @@ class ConeDetectionNode(Node):
                 # y_center = int((y1 + y2) / 2)
 
                 # Check if center coordinates are within the image
-                # height, width = depth_image.shape
                 # if 0 <= x_center < width and 0 <= y_center < height:
                 #     # Retrieve depth value at center point
-                #     z_value = depth_image[y_center, x_center]
+                #     z_value = color_image_rgb[y_center, x_center]
 
                 #     # Check if depth value is valid
                 #     if np.isfinite(z_value) and z_value > 0:
