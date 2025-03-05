@@ -13,7 +13,7 @@ import cv2
 from avai_messages.msg import Detection, DetectionArray, DetectionArrayStamped
 from cv_bridge import CvBridge
 from std_msgs.msg import Float64
-sys.path.append(os.path.dirname(__file__)+"/../camera_pkg")
+sys.path.append(os.path.dirname(__file__)+"/../cone_detection_pkg")
 from cone_detection_node import ConeDetectionNode
 from sensor_msgs.msg import Image, CompressedImage
 
@@ -36,13 +36,13 @@ class TestCameraNode(unittest.TestCase):
         self.received_detections_msgs = []
         self.received_detection_images_msgs = []
 
-        self.detection_sub = self.node.create_subscription(
+        self.detection_sub = self.test_node.create_subscription(
             DetectionArrayStamped,
             "detections",
             lambda msg: self.received_detections_msgs.append(msg),
             10)
 
-        self.detection_images_sub = self.node.create_subscription(
+        self.detection_images_sub = self.test_node.create_subscription(
             Image,
             "detections/images",
             lambda msg: self.received_detection_images_msgs.append(msg),
@@ -59,6 +59,7 @@ class TestCameraNode(unittest.TestCase):
         # Lese und konvertiere das Testbild
         img_path = os.path.join(os.path.dirname(__file__), "Image.png")
         color_image = cv2.imread(img_path)
+        color_image = cv2.cvtColor(color_image, cv2.COLOR_RGB2BGR)
         color_msg = self.bridge.cv2_to_imgmsg(color_image, encoding='bgr8')
         self.cone_detection_node.image_callback(color_msg)
 
@@ -70,6 +71,11 @@ class TestCameraNode(unittest.TestCase):
         self.assertGreater(len(self.received_detections_msgs), 0,
                            " node did not publish a processed color image.")
         print(self.received_detections_msgs)
+        for i in self.received_detection_images_msgs:
+            save_image = self.bridge.imgmsg_to_cv2(color_msg, desired_encoding='rgb8')
+            output_path = os.path.join(os.path.dirname(__file__), "Image_output.png")
+            cv2.imwrite(output_path, save_image)
+            
 
         
 if __name__ == '__main__':
