@@ -14,6 +14,8 @@ setup(
         ("lib/python3.10/site-packages/"+package_name+"/ml_model", [package_name+"/ml_model/best_l.pt"]),
         ("lib/python3.10/site-packages/"+package_name+"/ml_model", [package_name+"/ml_model/best_nano.pt"]),
         ("lib/python3.10/site-packages/"+package_name+"/ml_model", [package_name+"/ml_model/best_n_negatives.pt"]),
+        # ("lib/python3.10/site-packages/"+package_name+"/ml_model", [package_name+"/ml_model/last_medium.pt"]),
+        # ("lib/python3.10/site-packages/"+package_name+"/ml_model", [package_name+"/ml_model/last_nano.pt"]),
         #("lib/python3.10/site-packages/"+package_name+"/ml_model", [package_name+"/ml_model/best_25_synthetic.pt"]),
         #("lib/python3.10/site-packages/"+package_name+"/ml_model", [package_name+"/ml_model/best_m.pt"]),
     ],
