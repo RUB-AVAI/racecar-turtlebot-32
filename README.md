@@ -84,4 +84,4 @@ ros2 topic list
 ```
 
 ## Demo
-[![Racecar DEMO](https://img.youtube.com/vi/VUXPDdpeL6c/100.jpg)](https://www.youtube.com/watch?v=VUXPDdpeL6c)
+[![IMAGE ALT TEXT HERE](https://img.youtube.com/vi/VUXPDdpeL6c/3.jpg)](https://www.youtube.com/watch?v=VUXPDdpeL6c)
