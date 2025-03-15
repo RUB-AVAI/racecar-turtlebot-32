@@ -86,4 +86,4 @@ ros2 topic list
 ## Demo
 [![IMAGE ALT TEXT HERE](https://img.youtube.com/vi/VUXPDdpeL6c/0.jpg)](https://www.youtube.com/watch?v=VUXPDdpeL6c)
 
-[![Youtube Video]](https://www.youtube.com/watch?v=VUXPDdpeL6c)
+[Youtube Video](https://www.youtube.com/watch?v=VUXPDdpeL6c)
