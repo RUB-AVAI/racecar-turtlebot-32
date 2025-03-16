@@ -1,3 +1,8 @@
+# About
+This Github Repository is part of the Autonomous Vehicles and Artificial Intelligence Lab Course WS 24/25. 
+
+Autonomous driving is the future of individual mobility and all major manufacturers are working on fully autonomous vehicles. While there are robust and good solutions for the individual problems in autonomous driving, the main challenge lies in their integration. Altogether, an autonomous vehicle’s software is the biggest problem. Therefore, the key in self-driving vehicles is about getting the software right. In this course, we will investigate the different aspects of self-driving vehicles as well as the importance and application of artificial intelligence in this domain from a theoretical but especially from a practical perspective.
+
 # Installation
 ROS2 Humble must already be set up.
 
